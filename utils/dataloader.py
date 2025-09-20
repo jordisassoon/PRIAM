@@ -36,13 +36,11 @@ class PollenDataLoader:
 
         # Drop metadata columns (Depth, Age)
         meta_cols = ["Depth", "Age"]
+        ages = test_df["Age"]
         taxa_cols = [c for c in test_df.columns if c not in meta_cols]
         X_test = test_df[taxa_cols]
 
-        # Drop rows with NaNs
-        X_test = X_test.dropna()
-
-        return X_test
+        return X_test, ages
 
     def align_taxa(self, X_train: pd.DataFrame, X_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         all_taxa = sorted(set(X_train.columns).union(set(X_test.columns)))

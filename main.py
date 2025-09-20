@@ -14,7 +14,7 @@ from models.rf import RF
 @click.option('--test_pollen', required=True, type=click.Path(exists=True), help='Path to test fossil pollen CSV file')
 @click.option('--model', required=True, type=click.Choice(['MAT', 'BRT', 'WA-PLS', 'RF'], case_sensitive=False), help='Which model to use')
 @click.option('--target', default='TANN', help='Climate target variable to predict (e.g., TANN)')
-@click.option('--k', default=5, type=int, help='Number of neighbors for MAT')
+@click.option('--k', default=3, type=int, help='Number of neighbors for MAT')
 @click.option('--seed', default=42, type=int, help='Random seed')
 @click.option('--pls_components', default=3, type=int, help='Number of PLS components for WA-PLS')
 @click.option('--output_csv', required=True, type=click.Path(), help='Path to save predictions CSV')
@@ -29,7 +29,7 @@ def main(train_climate, train_pollen, test_pollen, model, target, k, seed, pls_c
     )
 
     X_train, y_train = loader.load_training_data(target=target)
-    X_test = loader.load_test_data()
+    X_test, ages = loader.load_test_data()
     X_train_aligned, X_test_aligned = loader.align_taxa(X_train, X_test)
 
     # Train and predict

@@ -13,7 +13,7 @@ st.title("🌿 Pollen-based Climate Reconstruction")
 # Sidebar inputs
 st.sidebar.header("Configuration")
 model_choice = st.sidebar.selectbox("Choose a model", ["MAT", "BRT", "WA-PLS", "RF"])
-target = st.sidebar.selectbox("Target climate variable", ["TANN", "Temp_season", "MTWA", "MTCO"])
+target = st.sidebar.selectbox("Target climate variable", ["TANN", "Temp_season", "MTWA", "MTCO", "PANN"])
 k = st.sidebar.slider("Number of neighbors (MAT only)", 1, 20, 5)
 pls_components = st.sidebar.slider("PLS components (WA-PLS only)", 1, 10, 3)
 random_seed = st.sidebar.number_input("Random seed", value=42)
@@ -33,7 +33,7 @@ if train_climate_file and train_pollen_file and test_pollen_file:
     )
 
     X_train, y_train = loader.load_training_data(target=target)
-    X_test = loader.load_test_data()
+    X_test, ages = loader.load_test_data()
     X_train_aligned, X_test_aligned = loader.align_taxa(X_train, X_test)
 
     # Model selection
@@ -55,12 +55,12 @@ if train_climate_file and train_pollen_file and test_pollen_file:
 
     # Display results
     st.subheader("Predictions")
-    df_preds = pd.DataFrame({f"Predicted_{target}": predictions})
+    df_preds = pd.DataFrame({"Age": ages.values, f"Predicted_{target}": predictions})
     st.write(df_preds)
 
-    # Plot results
+    # Plot results with Age as x-axis
     st.subheader("Visualization")
-    st.line_chart(df_preds)
+    st.line_chart(df_preds.set_index("Age"))
 
     # Download option
     csv = df_preds.to_csv(index=False).encode("utf-8")
