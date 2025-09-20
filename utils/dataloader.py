@@ -9,16 +9,6 @@ class PollenDataLoader:
         self.test_file = test_file
 
     def load_training_data(self, target: str = "TANN") -> Tuple[pd.DataFrame, pd.Series]:
-        """
-        Load and merge climate and pollen training data.
-
-        Parameters:
-        - target: which climate variable to predict (e.g., 'TANN')
-
-        Returns:
-        - X: DataFrame of pollen taxa counts
-        - y: Series of target climate values
-        """
         climate_df = pd.read_csv(self.climate_file, encoding="latin1")
         pollen_df = pd.read_csv(self.pollen_file, encoding="latin1")
 
@@ -34,15 +24,14 @@ class PollenDataLoader:
             raise ValueError(f"Target {target} not found in climate file. Available: {list(climate_df.columns)}")
         y = merged[target]
 
+        # Drop rows with NaNs (necessary for WA-PLS)
+        mask = X.notna().all(axis=1) & y.notna()
+        X = X[mask]
+        y = y[mask]
+
         return X, y
 
     def load_test_data(self) -> pd.DataFrame:
-        """
-        Load test fossil pollen data and align taxa with training set.
-
-        Returns:
-        - X_test: DataFrame with aligned taxa columns
-        """
         test_df = pd.read_csv(self.test_file, encoding="latin1")
 
         # Drop metadata columns (Depth, Age)
@@ -50,17 +39,15 @@ class PollenDataLoader:
         taxa_cols = [c for c in test_df.columns if c not in meta_cols]
         X_test = test_df[taxa_cols]
 
+        # Drop rows with NaNs
+        X_test = X_test.dropna()
+
         return X_test
 
     def align_taxa(self, X_train: pd.DataFrame, X_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """
-        Align taxa between training and test datasets (fill missing with 0).
-        """
         all_taxa = sorted(set(X_train.columns).union(set(X_test.columns)))
-
         X_train_aligned = X_train.reindex(columns=all_taxa, fill_value=0)
         X_test_aligned = X_test.reindex(columns=all_taxa, fill_value=0)
-
         return X_train_aligned, X_test_aligned
 
 
