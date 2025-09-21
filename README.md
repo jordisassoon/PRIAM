@@ -109,7 +109,7 @@ Features:
 - [X] Cross-validation results / bootstrapping  
 - [ ] Map for analogues  
 - [ ] Neighbours for analogues  
-- [ ] Selection of taxa to include / exclude  
+- [X] Selection of taxa to include / exclude  
 - [ ] Visualise imported files  
 - [ ] Feature importance  
 - [ ] Harmonisation checker  
