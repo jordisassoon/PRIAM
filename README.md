@@ -99,3 +99,19 @@ Features:
 * Datasets are aligned automatically (non-overlapping taxa filled with zeros).
 * Predictions are saved with column name `Predicted_<target>`.
 * Tested on Linux (Python 3.10).
+
+## Coming Features
+
+- [ ] Model parameter section (BRT iteration)  
+- [ ] Smoothing  
+- [ ] Error / trend — check existing code  
+- [ ] R² + RMSE metrics  
+- [ ] Cross-validation results / bootstrapping  
+- [ ] Map for analogues  
+- [ ] Neighbours for analogues  
+- [ ] Selection of taxa to include / exclude  
+- [ ] Visualise imported files  
+- [ ] Feature importance  
+- [ ] Harmonisation checker  
+- [ ] Author info  
+- [ ] Pollen diagram (presence over time: % and counts)  
