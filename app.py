@@ -12,8 +12,15 @@ st.title("🌿 Pollen-based Climate Reconstruction")
 
 # Sidebar inputs
 st.sidebar.header("Configuration")
-model_choice = st.sidebar.selectbox("Choose a model", ["MAT", "BRT", "WA-PLS", "RF"])
-target = st.sidebar.selectbox("Target climate variable", ["TANN", "Temp_season", "MTWA", "MTCO", "PANN"])
+model_choice = st.sidebar.selectbox(
+    "Choose a model",
+    ["MAT", "BRT", "WA-PLS", "RF", "All"],  # Add "All" option
+    index=0  # Default to MAT
+)
+target = st.sidebar.selectbox(
+    "Target climate variable",
+    ["TANN", "Temp_season", "MTWA", "MTCO", "PANN"]
+)
 k = st.sidebar.slider("Number of neighbors (MAT only)", 1, 20, 5)
 pls_components = st.sidebar.slider("PLS components (WA-PLS only)", 1, 10, 3)
 random_seed = st.sidebar.number_input("Random seed", value=42)
@@ -36,33 +43,39 @@ if train_climate_file and train_pollen_file and test_pollen_file:
     X_test, ages = loader.load_test_data()
     X_train_aligned, X_test_aligned = loader.align_taxa(X_train, X_test)
 
-    # Model selection
-    if model_choice == "MAT":
-        model = MAT(k=k)
-    elif model_choice == "BRT":
-        model = BRT(n_estimators=200, learning_rate=0.05, max_depth=4, random_state=random_seed)
-    elif model_choice == "WA-PLS":
-        model = WA_PLS(n_components=pls_components)
-    elif model_choice == "RF":
-        model = RF(n_estimators=200, max_depth=10, random_state=random_seed)
+    # Prepare models
+    available_models = {
+        "MAT": MAT(k=k),
+        "BRT": BRT(n_estimators=100, learning_rate=0.05, max_depth=3, random_state=random_seed),
+        "WA-PLS": WA_PLS(n_components=pls_components),
+        "RF": RF(n_estimators=100, max_depth=6, random_state=random_seed)
+    }
+
+    # Determine which models to run
+    if model_choice == "All":
+        models_to_run = available_models
     else:
-        st.error("Invalid model choice")
-        st.stop()
+        models_to_run = {model_choice: available_models[model_choice]}
 
-    # Train + predict
-    model.fit(X_train_aligned, y_train)
-    predictions = model.predict(X_test_aligned)
+    # Train and predict
+    predictions_dict = {}
+    for name, model in models_to_run.items():
+        model.fit(X_train_aligned, y_train)
+        predictions_dict[name] = model.predict(X_test_aligned)
 
-    # Display results
+    # Combine predictions into dataframe
+    df_preds = pd.DataFrame({"Age": ages.values})
+    for name, preds in predictions_dict.items():
+        df_preds[f"{name}_{target}"] = preds
+
+    # Display
     st.subheader("Predictions")
-    df_preds = pd.DataFrame({"Age": ages.values, f"Predicted_{target}": predictions})
     st.write(df_preds)
 
-    # Plot results with Age as x-axis
     st.subheader("Visualization")
     st.line_chart(df_preds.set_index("Age"))
 
-    # Download option
+    # Download
     csv = df_preds.to_csv(index=False).encode("utf-8")
     st.download_button(
         label="Download predictions as CSV",
