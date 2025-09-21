@@ -21,7 +21,7 @@ cd pollen-recon
 ### 2. Create and activate a conda environment
 
 ```bash
-conda create -f environment.yaml
+conda env create -f environment.yaml
 conda activate pylaeo
 ```
 
