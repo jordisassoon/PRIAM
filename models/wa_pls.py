@@ -19,15 +19,21 @@ class WA_PLS:
         y_modern = np.asarray(y_modern, dtype=np.float32)
         self.X_modern = X_modern
         self.y_modern = y_modern
+        
+        # Compute column (taxon) sums
+        col_sums = X_modern.sum(axis=0)
 
-        # Normalize modern taxa to percentages
-        X_modern_norm = X_modern / X_modern.sum(axis=1, keepdims=True)
+        # Avoid division by zero: set zero-sum columns to 1 temporarily
+        safe_col_sums = np.where(col_sums == 0, 1.0, col_sums)
 
         # Compute taxon-wise weighted averages
-        self.taxa_weighted_env = np.dot(X_modern_norm.T, y_modern) / X_modern_norm.sum(axis=0)
+        self.taxa_weighted_env = np.dot(X_modern.T, y_modern) / safe_col_sums
+
+        # Set weights of originally zero-sum columns to zero
+        self.taxa_weighted_env[col_sums == 0] = 0.0
 
         # Compute WA predictions for modern samples
-        y_WA = np.dot(X_modern_norm, self.taxa_weighted_env)
+        y_WA = np.dot(X_modern, self.taxa_weighted_env)
 
         # Residuals for PLS regression
         residuals = y_modern - y_WA

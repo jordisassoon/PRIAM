@@ -1,65 +1,121 @@
 import click
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.metrics import mean_squared_error, r2_score
+
 from utils.dataloader import PollenDataLoader
 from models.mat import MAT
 from models.brt import BRT
 from models.wa_pls import WA_PLS
 from models.rf import RF
 
+
+def run_grouped_cv(model_class, model_params, X, y, groups, n_splits=5, seed=42, loader=None):
+    """
+    Run grouped cross-validation (based on OBSNAME).
+    Returns RMSE and R² across folds.
+    """
+    scores_rmse, scores_r2 = [], []
+
+    for train_idx, val_idx in loader.grouped_cv_splits(X, y, groups, n_splits=n_splits, seed=seed):
+        X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+        y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+        model = model_class(**model_params)  # reinitialize each fold
+        model.fit(X_train, y_train)
+        preds = model.predict(X_val)
+
+        scores_rmse.append(np.sqrt(mean_squared_error(y_val, preds)))
+        scores_r2.append(r2_score(y_val, preds))
+
+    print(f"CV results ({n_splits} folds, grouped by OBSNAME):")
+    print(f"  RMSE: {np.mean(scores_rmse):.3f} ± {np.std(scores_rmse):.3f}")
+    print(f"  R²:   {np.mean(scores_r2):.3f} ± {np.std(scores_r2):.3f}")
+    return scores_rmse, scores_r2
+
+
 @click.command()
-@click.option('--train_climate', required=True, type=click.Path(exists=True), help='Path to climate target CSV file')
-@click.option('--train_pollen', required=True, type=click.Path(exists=True), help='Path to pollen training CSV file')
-@click.option('--test_pollen', required=True, type=click.Path(exists=True), help='Path to test fossil pollen CSV file')
-@click.option('--model', required=True, type=click.Choice(['MAT', 'BRT', 'WA-PLS', 'RF'], case_sensitive=False), help='Which model to use')
-@click.option('--target', default='TANN', help='Climate target variable to predict (e.g., TANN)')
-@click.option('--k', default=3, type=int, help='Number of neighbors for MAT')
-@click.option('--seed', default=42, type=int, help='Random seed')
-@click.option('--pls_components', default=3, type=int, help='Number of PLS components for WA-PLS')
-@click.option('--output_csv', required=True, type=click.Path(), help='Path to save predictions CSV')
-def main(train_climate, train_pollen, test_pollen, model, target, k, seed, pls_components, output_csv):
+@click.option('--train_climate', required=True, type=click.Path(exists=True))
+@click.option('--train_pollen', required=True, type=click.Path(exists=True))
+@click.option('--test_pollen', required=True, type=click.Path(exists=True))
+@click.option('--taxa_mask', required=True, type=click.Path(exists=True))
+@click.option('--model_name', required=True,
+              type=click.Choice(['MAT', 'BRT', 'WA-PLS', 'RF', 'ALL'], case_sensitive=False))
+@click.option('--target', default='TANN', show_default=True)
+@click.option('--seed', default=42, type=int, show_default=True)
+@click.option('--cv_folds', default=1, type=int, show_default=True, help='Number of CV folds (grouped by OBSNAME)')
+
+# MAT options
+@click.option('--k', default=3, type=int, show_default=True)
+
+# BRT options
+@click.option('--brt_estimators', default=200, type=int, show_default=True)
+@click.option('--brt_lr', default=0.05, type=float, show_default=True)
+@click.option('--brt_max_depth', default=4, type=int, show_default=True)
+
+# WA-PLS options
+@click.option('--pls_components', default=3, type=int, show_default=True)
+
+# RF options
+@click.option('--rf_estimators', default=200, type=int, show_default=True)
+@click.option('--rf_max_depth', default=10, type=int, show_default=True)
+
+@click.option('--output_csv', required=True, type=click.Path())
+def main(train_climate, train_pollen, test_pollen, taxa_mask, model_name, target, seed, cv_folds,
+         k, brt_estimators, brt_lr, brt_max_depth,
+         pls_components, rf_estimators, rf_max_depth, output_csv):
+
     np.random.seed(seed)
 
-    # Load and prepare data
-    loader = PollenDataLoader(
-        climate_file=train_climate,
-        pollen_file=train_pollen,
-        test_file=test_pollen
-    )
-
-    X_train, y_train = loader.load_training_data(target=target)
+    # --- Load data ---
+    loader = PollenDataLoader(train_climate, train_pollen, test_pollen, taxa_mask)
+    X_train, y_train, obs_names = loader.load_training_data(target=target)
     X_test, ages = loader.load_test_data()
     X_train_aligned, X_test_aligned = loader.align_taxa(X_train, X_test)
 
-    # Train and predict
-    if model.upper() == 'MAT':
-        mat_model = MAT(k=k)
-        mat_model.fit(X_train_aligned, y_train)
-        predictions = mat_model.predict_with_progress(X_test_aligned, batch_size=50)
+    # --- Define models ---
+    model_configs = {
+        "MAT": (MAT, {"k": k}),
+        "BRT": (BRT, {"n_estimators": brt_estimators,
+                      "learning_rate": brt_lr,
+                      "max_depth": brt_max_depth,
+                      "random_state": seed}),
+        "WA-PLS": (WA_PLS, {"n_components": pls_components}),
+        "RF": (RF, {"n_estimators": rf_estimators,
+                    "max_depth": rf_max_depth,
+                    "random_state": seed})
+    }
 
-    elif model.upper() == 'BRT':
-        brt_model = BRT(n_estimators=200, learning_rate=0.05, max_depth=4, random_state=seed)
-        brt_model.fit(X_train_aligned, y_train)
-        predictions = brt_model.predict_with_progress(X_test_aligned, batch_size=50)
-
-    elif model.upper() == 'WA-PLS':
-        wa_pls_model = WA_PLS(n_components=pls_components)
-        wa_pls_model.fit(X_train_aligned, y_train)
-        predictions = wa_pls_model.predict_with_progress(X_test_aligned, batch_size=50)
-
-    elif model.upper() == 'RF':
-        rf_model = RF(n_estimators=200, max_depth=10, random_state=42)
-        rf_model.fit(X_train_aligned, y_train)
-        predictions = rf_model.predict_with_progress(X_test_aligned, batch_size=50)
-
+    # Select models
+    if model_name.upper() == "ALL":
+        models_to_run = model_configs
     else:
-        print(f"Your model {model} was not found")
-        return
+        models_to_run = {model_name.upper(): model_configs[model_name.upper()]}
 
-    # Save predictions to CSV for visualization
-    pd.DataFrame(predictions, columns=[f'Predicted_{target}']).to_csv(output_csv, index=False)
-    print(f"Predictions for {target} using {model} model saved to {output_csv}")
+    predictions_dict = {}
+
+    for name, (model_class, params) in models_to_run.items():
+        print(f"\n=== Running {model_class} ===")
+
+        # --- Cross-validation ---
+        if cv_folds > 1:
+            run_grouped_cv(model_class, params, X_train_aligned, y_train, obs_names,
+                           n_splits=cv_folds, seed=seed, loader=loader)
+
+        # --- Final fit + predict ---
+        model = model_class(**params)
+        model.fit(X_train_aligned, y_train)
+        preds = model.predict(X_test_aligned)
+        predictions_dict[model_class] = preds
+
+    # --- Save predictions ---
+    df_out = pd.DataFrame({"Age": ages})
+    for name, preds in predictions_dict.items():
+        df_out[f"{name}_Predicted_{target}"] = preds
+
+    df_out.to_csv(output_csv, index=False)
+    print(f"\nSaved predictions to {output_csv}")
+
 
 if __name__ == '__main__':
     main()
