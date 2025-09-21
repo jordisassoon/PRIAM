@@ -102,11 +102,11 @@ Features:
 
 ## Coming Features
 
-- [ ] Model parameter section (BRT iteration)  
+- [X] Model parameter section (BRT iteration)  
 - [ ] Smoothing  
 - [ ] Error / trend — check existing code  
-- [ ] R² + RMSE metrics  
-- [ ] Cross-validation results / bootstrapping  
+- [X] R² + RMSE metrics  
+- [X] Cross-validation results / bootstrapping  
 - [ ] Map for analogues  
 - [ ] Neighbours for analogues  
 - [ ] Selection of taxa to include / exclude  
