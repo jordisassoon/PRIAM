@@ -6,6 +6,7 @@ from models.brt import BRT
 from models.wa_pls import WA_PLS
 from models.rf import RF
 from utils.dataloader import PollenDataLoader
+import altair as alt
 
 # App title
 st.title("🌿 Pollen-based Climate Reconstruction")
@@ -39,7 +40,7 @@ if train_climate_file and train_pollen_file and test_pollen_file:
         test_file=test_pollen_file
     )
 
-    X_train, y_train = loader.load_training_data(target=target)
+    X_train, y_train, obs_names = loader.load_training_data(target=target)
     X_test, ages = loader.load_test_data()
     X_train_aligned, X_test_aligned = loader.align_taxa(X_train, X_test)
 
@@ -68,12 +69,41 @@ if train_climate_file and train_pollen_file and test_pollen_file:
     for name, preds in predictions_dict.items():
         df_preds[f"{name}_{target}"] = preds
 
+    # Set Age as index
+    df_plot = df_preds.set_index("Age")
+
+    # Apply rolling mean to all prediction columns
+    smoothed_df = df_plot.rolling(window=4, min_periods=1).mean()
+    smoothed_df = smoothed_df.add_suffix("_smoothed")
+
+    # Combine original and smoothed
+    df_plot_combined = pd.concat([df_plot, smoothed_df], axis=1).reset_index()
+
+    # Melt dataframe for Altair
+    df_melted = df_plot_combined.melt(id_vars="Age", var_name="Model", value_name="Prediction")
+
+    # Define line thickness
+    df_melted["Thickness"] = df_melted["Model"].apply(lambda x: 4 if "_smoothed" in x else 1)
+
+    # Altair chart
+    chart = (
+        alt.Chart(df_melted)
+        .mark_line()
+        .encode(
+            x="Age",
+            y="Prediction",
+            color="Model",
+            strokeWidth="Thickness"
+        )
+        .interactive()
+    )
+
+    st.subheader("Visualization")
+    st.altair_chart(chart, use_container_width=True)
+
     # Display
     st.subheader("Predictions")
     st.write(df_preds)
-
-    st.subheader("Visualization")
-    st.line_chart(df_preds.set_index("Age"))
 
     # Download
     csv = df_preds.to_csv(index=False).encode("utf-8")

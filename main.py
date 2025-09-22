@@ -13,7 +13,7 @@ from models.rf import RF
 @click.option('--train_climate', required=True, type=click.Path(exists=True))
 @click.option('--train_pollen', required=True, type=click.Path(exists=True))
 @click.option('--test_pollen', required=True, type=click.Path(exists=True))
-@click.option('--taxa_mask', required=True, type=click.Path(exists=True))
+@click.option('--taxa_mask', default=None, type=click.Path(exists=True))
 @click.option('--model_name', required=True,
               type=click.Choice(['MAT', 'BRT', 'WA-PLS', 'RF', 'ALL'], case_sensitive=False))
 @click.option('--target', default='TANN', show_default=True)

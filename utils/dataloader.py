@@ -4,7 +4,7 @@ from typing import Tuple, Iterator
 from sklearn.model_selection import GroupKFold
 
 class PollenDataLoader:
-    def __init__(self, climate_file: str, pollen_file: str, test_file: str, mask_file: str):
+    def __init__(self, climate_file: str, pollen_file: str, test_file: str, mask_file: str = None):
         self.climate_file = climate_file
         self.pollen_file = pollen_file
         self.test_file = test_file
@@ -21,7 +21,8 @@ class PollenDataLoader:
         """
         climate_df = pd.read_csv(self.climate_file, delimiter=';', encoding="latin1")
         pollen_df = pd.read_csv(self.pollen_file, delimiter=';', encoding="latin1")
-        mask_df = pd.read_csv(self.mask_file, encoding="latin1")
+        if self.mask_file:
+            mask_df = pd.read_csv(self.mask_file, encoding="latin1")
 
         if "ï»¿OBSNAME" not in pollen_df.columns:
             raise ValueError("Pollen file must contain an ï»¿OBSNAME column for grouped CV.")
@@ -31,7 +32,8 @@ class PollenDataLoader:
         # Drop non-numeric columns for taxa
         taxa_cols = [c for c in pollen_df.columns if c != "ï»¿OBSNAME"]
         X_taxa = pollen_df[taxa_cols]
-        # X_taxa = self.filter_taxa_by_mask(X_taxa, mask_df)
+        if self.mask_file:
+            X_taxa = self.filter_taxa_by_mask(X_taxa, mask_df)
 
         # Drop zero-only taxa
         nonzero_taxa = (X_taxa.sum(axis=0) != 0)
@@ -59,14 +61,16 @@ class PollenDataLoader:
 
     def load_test_data(self) -> Tuple[pd.DataFrame, pd.Series]:
         test_df = pd.read_csv(self.test_file, delimiter=',', encoding="latin1")
-        mask_df = pd.read_csv(self.mask_file, encoding="latin1")
+        if self.mask_file:
+            mask_df = pd.read_csv(self.mask_file, encoding="latin1")
 
         meta_cols = ["Depth", "Age", "OBSNAME"]
         ages = test_df["Age"] if "Age" in test_df.columns else pd.Series(np.arange(len(test_df)))
         taxa_cols = [c for c in test_df.columns if c not in meta_cols]
         X_test = test_df[taxa_cols]
 
-        # X_test = self.filter_taxa_by_mask(X_test, mask_df)
+        if self.mask_file:
+            X_test = self.filter_taxa_by_mask(X_test, mask_df)
 
         X_test = self._normalize_rows(X_test)
         return X_test, ages
