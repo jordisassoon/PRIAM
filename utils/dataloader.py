@@ -13,24 +13,42 @@ class PollenDataLoader:
     def _normalize_rows(self, df: pd.DataFrame) -> pd.DataFrame:
         row_sums = df.sum(axis=1)
         return df.div(row_sums.replace(0, np.nan), axis=0).fillna(0)
+    
+    def read_csv_auto_delimiter(self, uploaded_file, encoding="latin1"):
+        # Try common delimiters
+        for delimiter in [",", ";", "\t"]:
+            try:
+                uploaded_file.seek(0)  # Reset pointer before each try
+                df = pd.read_csv(uploaded_file, delimiter=delimiter, encoding=encoding)
+                if df.shape[1] > 1:  # Heuristic: more than 1 column means likely correct delimiter
+                    return df
+            except Exception:
+                continue
+        # If none worked, raise error
+        raise ValueError("Could not detect delimiter automatically.")
 
     def load_training_data(self, target: str = "TANN") -> Tuple[pd.DataFrame, pd.Series, pd.Series]:
         """
         Load and merge climate and pollen training data.
         Returns X, y, and obs_names (for grouped CV).
         """
-        climate_df = pd.read_csv(self.climate_file, delimiter=';', encoding="latin1")
-        pollen_df = pd.read_csv(self.pollen_file, delimiter=';', encoding="latin1")
+        climate_df = self.read_csv_auto_delimiter(self.climate_file)
+        pollen_df = self.read_csv_auto_delimiter(self.pollen_file)
         if self.mask_file:
-            mask_df = pd.read_csv(self.mask_file, encoding="latin1")
+            mask_df = self.read_csv_auto_delimiter(self.mask_file)
+        
+        if "ï»¿OBSNAME" in climate_df.columns:
+            climate_df = climate_df.rename(columns={"ï»¿OBSNAME": "OBSNAME"})
+        if "ï»¿OBSNAME" in pollen_df.columns:
+            pollen_df = pollen_df.rename(columns={"ï»¿OBSNAME": "OBSNAME"})
 
-        if "ï»¿OBSNAME" not in pollen_df.columns:
-            raise ValueError("Pollen file must contain an ï»¿OBSNAME column for grouped CV.")
+        if "OBSNAME" not in pollen_df.columns:
+            raise ValueError("Pollen file must contain an OBSNAME column for grouped CV.")
 
-        obs_names = pollen_df["ï»¿OBSNAME"]
+        obs_names = pollen_df["OBSNAME"]
 
         # Drop non-numeric columns for taxa
-        taxa_cols = [c for c in pollen_df.columns if c != "ï»¿OBSNAME"]
+        taxa_cols = [c for c in pollen_df.columns if c != "OBSNAME"]
         X_taxa = pollen_df[taxa_cols]
         if self.mask_file:
             X_taxa = self.filter_taxa_by_mask(X_taxa, mask_df)
@@ -60,9 +78,9 @@ class PollenDataLoader:
         return X_taxa, y, obs_names
 
     def load_test_data(self) -> Tuple[pd.DataFrame, pd.Series]:
-        test_df = pd.read_csv(self.test_file, delimiter=',', encoding="latin1")
+        test_df = self.read_csv_auto_delimiter(self.test_file)
         if self.mask_file:
-            mask_df = pd.read_csv(self.mask_file, encoding="latin1")
+            mask_df = self.read_csv_auto_delimiter(self.mask_file)
 
         meta_cols = ["Depth", "Age", "OBSNAME"]
         ages = test_df["Age"] if "Age" in test_df.columns else pd.Series(np.arange(len(test_df)))
@@ -98,7 +116,7 @@ class PollenDataLoader:
 
     def grouped_cv_splits(self, X: pd.DataFrame, y: pd.Series, groups: pd.Series, n_splits: int = 5, seed: int = 42) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
         """
-        Yield train/validation indices using GroupKFold on ï»¿OBSNAME.
+        Yield train/validation indices using GroupKFold on OBSNAME.
         """
         gkf = GroupKFold(n_splits=n_splits)
         for train_idx, val_idx in gkf.split(X, y, groups=groups):

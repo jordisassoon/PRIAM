@@ -6,6 +6,7 @@ from models.brt import BRT
 from models.wa_pls import WA_PLS
 from models.rf import RF
 from utils.dataloader import PollenDataLoader
+from scipy.ndimage import gaussian_filter1d
 import altair as alt
 
 # App title
@@ -72,8 +73,8 @@ if train_climate_file and train_pollen_file and test_pollen_file:
     # Set Age as index
     df_plot = df_preds.set_index("Age")
 
-    # Apply rolling mean to all prediction columns
-    smoothed_df = df_plot.rolling(window=4, min_periods=1).mean()
+    # Apply Gaussian smoothing to all prediction columns
+    smoothed_df = df_plot.apply(lambda col: gaussian_filter1d(col, sigma=2))
     smoothed_df = smoothed_df.add_suffix("_smoothed")
 
     # Combine original and smoothed
@@ -98,7 +99,8 @@ if train_climate_file and train_pollen_file and test_pollen_file:
         .interactive()
     )
 
-    st.subheader("Visualization")
+    # Display chart in Streamlit
+    import streamlit as st
     st.altair_chart(chart, use_container_width=True)
 
     # Display
