@@ -107,7 +107,7 @@ Features:
 - [ ] Error / trend — check existing code  
 - [X] R² + RMSE metrics  
 - [X] Cross-validation results / bootstrapping  
-- [ ] Map for analogues  
+- [X] Map for analogues  
 - [ ] Neighbours for analogues  
 - [X] Selection of taxa to include / exclude  
 - [ ] Visualise imported files  
