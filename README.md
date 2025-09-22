@@ -103,7 +103,7 @@ Features:
 ## Coming Features
 
 - [X] Model parameter section (BRT iteration)  
-- [ ] Smoothing  
+- [X] Smoothing  
 - [ ] Error / trend — check existing code  
 - [X] R² + RMSE metrics  
 - [X] Cross-validation results / bootstrapping  
