@@ -112,7 +112,7 @@ class PollenDataLoader:
         X_train_aligned = X_train[shared_cols]
         X_test_aligned = X_test[shared_cols]
 
-        return X_train_aligned, X_test_aligned
+        return X_train_aligned, X_test_aligned, shared_cols
 
     def grouped_cv_splits(self, X: pd.DataFrame, y: pd.Series, groups: pd.Series, n_splits: int = 5, seed: int = 42) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
         """
