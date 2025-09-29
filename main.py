@@ -55,7 +55,7 @@ def main(train_climate, train_pollen, test_pollen, taxa_mask, model_name, target
                       "learning_rate": brt_lr,
                       "max_depth": brt_max_depth,
                       "random_state": seed}),
-        "WA-PLS": (WA_PLS, {"n_components": pls_components}),
+        # "WA-PLS": (WA_PLS, {"n_components": pls_components}),
         "RF": (RF, {"n_estimators": rf_estimators,
                     "max_depth": rf_max_depth,
                     "random_state": seed})

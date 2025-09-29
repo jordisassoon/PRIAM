@@ -49,7 +49,7 @@ if train_climate_file and train_pollen_file and test_pollen_file:
     available_models = {
         "MAT": MAT(k=k),
         "BRT": BRT(n_estimators=100, learning_rate=0.05, max_depth=3, random_state=random_seed),
-        "WA-PLS": WA_PLS(n_components=pls_components),
+        # "WA-PLS": WA_PLS(n_components=pls_components),
         "RF": RF(n_estimators=100, max_depth=6, random_state=random_seed)
     }
 

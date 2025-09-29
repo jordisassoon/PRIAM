@@ -13,27 +13,30 @@ from scipy.ndimage import gaussian_filter1d
 def main(predictions_csv, depth_csv, output_file, title, smooth_sigma):
     # Load predictions
     df_pred = pd.read_csv(predictions_csv)
-    predictions = df_pred.iloc[:, 1].values  # assume second column contains predictions
+    prediction_cols = df_pred.columns[1:]  # assume first column is not a prediction
+    predictions = df_pred[prediction_cols].values  # shape: (n_rows, n_columns)
 
     # Load depth values
     df_depth = pd.read_csv(depth_csv)
     if 'Age' not in df_depth.columns:
-        raise ValueError("Age CSV must contain a 'age' column")
+        raise ValueError("Age CSV must contain an 'Age' column")
     depth = df_depth['Age'].values
 
-    if len(depth) != len(predictions):
-        raise ValueError(f"Number of depth values ({len(depth)}) does not match number of predictions ({len(predictions)})")
-
-    # Smooth predictions
-    predictions_smooth = gaussian_filter1d(predictions, sigma=smooth_sigma)
+    if len(depth) != predictions.shape[0]:
+        raise ValueError(f"Number of depth values ({len(depth)}) does not match number of predictions ({predictions.shape[0]})")
 
     plt.figure(figsize=(10, 5))
 
-    # Thin jagged line (no markers)
-    plt.plot(depth, predictions, linestyle='-', color='tab:blue', linewidth=1, alpha=0.5)
+    # Loop through each prediction column
+    for i, col_name in enumerate(prediction_cols):
+        pred_col = predictions[:, i]
 
-    # Thick smoothed line
-    plt.plot(depth, predictions_smooth, linestyle='-', color='tab:red', linewidth=3)
+        # Thin jagged line
+        plt.plot(depth, pred_col, linestyle='-', color='tab:blue', linewidth=1, alpha=0.5)
+
+        # Smoothed line (apply Gaussian filter column-wise)
+        pred_smooth = gaussian_filter1d(pred_col, sigma=smooth_sigma)
+        plt.plot(depth, pred_smooth, linestyle='-', color='tab:red', linewidth=3)
 
     plt.title(title)
     plt.xlabel('Age')

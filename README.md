@@ -114,5 +114,5 @@ Features:
 - [ ] Feature importance  
 - [ ] Harmonisation checker  
 - [ ] Author info  
-- [ ] Pollen diagram (presence over time: % and counts)
-- [ ] Plot records on 2D Variable graph (for example TANN/PANN)
+- [X] Pollen diagram (presence over time: % and counts)
+- [X] Plot records on 2D Variable graph (for example TANN/PANN)
