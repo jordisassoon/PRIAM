@@ -163,6 +163,126 @@ if train_climate_file and train_pollen_file and test_pollen_file:
         # Train on full dataset + predict fossils
         model.fit(X_train_aligned, y_train)
         predictions_dict[name] = model.predict(X_test_aligned)
+    
+    # === MAT Interactive Nearest Neighbors (t-SNE Space) ===
+    if model_choice == "MAT":
+        st.subheader("🎯 MAT Nearest Neighbors Explorer (t-SNE Space)")
+
+        from sklearn.manifold import TSNE
+
+        # Fit t-SNE on combined taxa data
+        combined_matrix = np.vstack([X_train_aligned.values, X_test_aligned.values])
+        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, random_state=random_seed)
+        coords = tsne.fit_transform(combined_matrix)
+
+        # Split coordinates
+        modern_coords = coords[:len(X_train_aligned)]
+        fossil_coords = coords[len(X_train_aligned):]
+
+        # Prepare modern dataframe
+        train_climate_file.seek(0)
+        train_meta = pd.read_csv(train_climate_file, encoding="latin1")
+        modern_df = train_meta.copy()
+        modern_df["Type"] = "Modern"
+        modern_df["Predicted"] = np.nan
+        modern_df["TSNE1"] = modern_coords[:, 0]
+        modern_df["TSNE2"] = modern_coords[:, 1]
+
+        # Prepare fossil dataframe
+        fossil_df = pd.DataFrame({
+            "OBSNAME": [f"Fossil_{i}" for i in range(len(fossil_coords))],
+            "TSNE1": fossil_coords[:, 0],
+            "TSNE2": fossil_coords[:, 1],
+            "Type": "Fossil",
+            "Age": ages.values,
+            f"Predicted_{target}": predictions_dict["MAT"]
+        })
+        fossil_df["Predicted"] = fossil_df[f"Predicted_{target}"]
+
+        # Get nearest neighbor info from MAT
+        neighbor_info = model.get_neighbors_info(X_test_aligned, train_meta, return_distance=True)
+
+        # Build links dataframe
+        link_rows = []
+        for i, info in enumerate(neighbor_info):
+            fossil_name = f"Fossil_{i}"
+            f_tsne1, f_tsne2 = fossil_coords[i]
+            for n in info["neighbors"]:
+                obsname = n["metadata"]["OBSNAME"]
+                if obsname in modern_df["OBSNAME"].values:
+                    m_row = modern_df.loc[modern_df["OBSNAME"] == obsname].iloc[0]
+                    link_rows.append({
+                        "fossil": fossil_name,
+                        "neighbor": obsname,
+                        "distance": n["distance"],
+                        "fossil_TSNE1": f_tsne1,
+                        "fossil_TSNE2": f_tsne2,
+                        "modern_TSNE1": m_row["TSNE1"],
+                        "modern_TSNE2": m_row["TSNE2"]
+                    })
+        links_df = pd.DataFrame(link_rows)
+        links_df = links_df.rename(columns={"fossil": "OBSNAME"})
+
+        # Combine modern + fossil for base chart
+        combined_df = pd.concat([modern_df, fossil_df], ignore_index=True)
+
+        # Compute explicit TSNE axis limits
+        tsne1_min, tsne1_max = combined_df["TSNE1"].min(), combined_df["TSNE1"].max()
+        tsne2_min, tsne2_max = combined_df["TSNE2"].min(), combined_df["TSNE2"].max()
+
+        # Altair selection
+        fossil_select = alt.selection_point(fields=["OBSNAME"], on="click")
+
+        # Base scatter
+        base = alt.Chart(combined_df).mark_circle().encode(
+            x=alt.X("TSNE1:Q", scale=alt.Scale(domain=(tsne1_min, tsne1_max))),
+            y=alt.Y("TSNE2:Q", scale=alt.Scale(domain=(tsne2_min, tsne2_max))),
+            color=alt.condition(
+                alt.datum.Type == "Fossil",
+                alt.value("red"),
+                alt.value("steelblue")
+            ),
+            opacity=alt.condition(fossil_select, alt.value(1.0), alt.value(0.3)),
+            tooltip=["OBSNAME:N", "Type:N", "Predicted:Q"]
+        ).add_params(fossil_select)
+
+        # Highlight neighbors
+        neighbor_highlight = (
+            alt.Chart(links_df)
+            .mark_circle(size=120, color="orange")
+            .encode(
+                x="modern_TSNE1:Q",
+                y="modern_TSNE2:Q",
+                tooltip=["neighbor:N", "distance:Q"]
+            )
+            .transform_filter(fossil_select)
+        )
+
+        # Connections
+        connections = (
+            alt.Chart(links_df)
+            .mark_line(color="orange", opacity=0.6)
+            .encode(
+                x="fossil_TSNE1:Q",
+                y="fossil_TSNE2:Q",
+                x2="modern_TSNE1:Q",
+                y2="modern_TSNE2:Q",
+                tooltip=["neighbor:N", "distance:Q"]
+            )
+            .transform_filter(fossil_select)
+        )
+
+        # Combine charts using alt.layer()
+        chart = alt.layer(base, neighbor_highlight, connections).resolve_scale(x='shared', y='shared').interactive()
+
+        st.altair_chart(chart, use_container_width=True)
+
+        st.info(
+            "💡 This t-SNE projection shows assemblage composition space. "
+            "Click a red fossil point to highlight its nearest modern analogues (orange) and connecting lines. "
+            "Other points fade out."
+        )
+
 
     # Combine predictions into dataframe
     df_preds = pd.DataFrame({"Age": ages.values})
@@ -240,6 +360,15 @@ if train_climate_file and train_pollen_file and test_pollen_file:
         with open(map_path, "r", encoding="utf-8") as f:
             folium_html = f.read()
         st.components.v1.html(folium_html, height=500, scrolling=True)
+        
+        with open(map_path, "rb") as f:
+            btn = st.download_button(
+                label="Download Map HTML",
+                data=f,
+                file_name="map_output.html",
+                mime="text/html"
+            )
+
     
     # === Taxa distribution per climate target (Altair) ===
     st.subheader("🌱 Taxa Preference per Climate Target")
@@ -302,7 +431,7 @@ if train_climate_file and train_pollen_file and test_pollen_file:
         with col1:
             x_var = st.selectbox("X-axis climate variable", climate_options, key="x_var_only")
         with col2:
-            y_var = st.selectbox("Y-axis climate variable", climate_options, key="y_var_only")
+            y_var = st.selectbox("Y-axis climate variable", [x for x in climate_options if x != x_var], key="y_var_only")
 
         # Load climate CSV
         train_climate_file.seek(0)
