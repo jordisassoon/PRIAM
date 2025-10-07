@@ -108,7 +108,7 @@ Features:
 - [X] R² + RMSE metrics  
 - [X] Cross-validation results / bootstrapping  
 - [X] Map for analogues  
-- [ ] Neighbours for analogues
+- [X] Neighbours for analogues
 - [ ] Trees visualisation
 - [ ] Fix WAPLS
 - [ ] Move models above everything
