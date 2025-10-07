@@ -111,6 +111,7 @@ Features:
 - [ ] Neighbours for analogues
 - [ ] Trees visualisation
 - [ ] Fix WAPLS
+- [ ] FIx scatter plot (fossil layer)
 - [X] Selection of taxa to include / exclude  
 - [ ] Visualise imported files  
 - [ ] Feature importance  
