@@ -117,10 +117,10 @@ Features:
 - [ ] Visualise imported files  
 - [ ] Feature importance  
 - [ ] Harmonisation checker  
+- [X] Pollen diagram (presence over time: % and counts)
+- [X] Plot records on 2D Variable graph (for example TANN/PANN)
 - [ ] Author info
 - [ ] Dummy dataset
 - [ ] Saving system
 - [ ] Invert X axis (age)
 - [ ] Language choice (?) 
-- [X] Pollen diagram (presence over time: % and counts)
-- [X] Plot records on 2D Variable graph (for example TANN/PANN)
