@@ -103,24 +103,6 @@ if train_climate_file and train_pollen_file and test_pollen_file:
     X_train, y_train, obs_names = loader.load_training_data(target=target)
     X_test, ages = loader.load_test_data()
     X_train_aligned, X_test_aligned, shared_cols = loader.align_taxa(X_train, X_test)
-    
-    # --- Taxa selection expander ---
-    if shared_cols is not None and len(shared_cols) > 0:
-        with st.expander("Select taxa to include in the model"):
-            # Dictionary to hold user selections
-            taxa_selection = {}
-            for taxa in shared_cols:
-                taxa_selection[taxa] = st.checkbox(taxa, value=True)  # default checked
-
-            # Filter columns based on selections
-            selected_taxa = [taxa for taxa, include in taxa_selection.items() if include]
-
-            if len(selected_taxa) == 0:
-                st.warning("⚠️ No taxa selected. Predictions may fail.")
-            else:
-                # Apply selection to aligned data
-                X_train_aligned = X_train_aligned[selected_taxa]
-                X_test_aligned = X_test_aligned[selected_taxa]
 
     # Prepare models
     available_models = {
@@ -163,9 +145,101 @@ if train_climate_file and train_pollen_file and test_pollen_file:
         # Train on full dataset + predict fossils
         model.fit(X_train_aligned, y_train)
         predictions_dict[name] = model.predict(X_test_aligned)
+        
+        if name == "MAT":
+            mat_model = model
+
+    # Combine predictions into dataframe
+    df_preds = pd.DataFrame({"Age": ages.values})
+    for name, preds in predictions_dict.items():
+        df_preds[f"{name}_{target}"] = preds
+
+    # Set Age as index
+    df_plot = df_preds.set_index("Age")
+    
+    # Sidebar smoothing control
+    smoothing_sigma = st.slider(
+        "Gaussian smoothing (σ)", 
+        min_value=0.0, 
+        max_value=10.0, 
+        value=2.0, 
+        step=0.1
+    )
+
+    # Apply Gaussian smoothing to all prediction columns
+    if smoothing_sigma > 0:
+        smoothed_df = df_plot.apply(lambda col: gaussian_filter1d(col, sigma=smoothing_sigma))
+        smoothed_df = smoothed_df.add_suffix("_smoothed")
+        df_plot_combined = pd.concat([df_plot, smoothed_df], axis=1).reset_index()
+    else:
+        df_plot_combined = df_plot.reset_index()
+
+    # Melt dataframe for Altair
+    df_melted = df_plot_combined.melt(id_vars="Age", var_name="Model", value_name="Prediction")
+
+    # Define line thickness
+    df_melted["Thickness"] = df_melted["Model"].apply(lambda x: 4 if "_smoothed" in x else 1)
+
+    # Altair chart
+    chart = (
+        alt.Chart(df_melted)
+        .mark_line()
+        .encode(
+            x=alt.X("Age", title="Age"),
+            y=alt.Y("Prediction", title=target, scale=alt.Scale(zero=False)),  # dynamic y
+            color="Model",
+            strokeWidth="Thickness"
+        )
+        .interactive()
+    )
+
+    # Display chart in Streamlit
+    st.altair_chart(chart, use_container_width=True)
+
+    # Display CV metrics in nice format
+    if metrics_display:
+        st.subheader("📊 Cross-validation Metrics")
+        metrics_df = pd.DataFrame(metrics_display).set_index("Model")
+        st.table(metrics_df)
+
+    # Display predictions
+    st.subheader("Predictions")
+    st.write(df_preds)
+
+    # Download
+    csv = df_preds.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Download predictions as CSV",
+        data=csv,
+        file_name="predictions.csv",
+        mime="text/csv",
+    )
+    
+    # --- Taxa selection expander ---
+    if shared_cols is not None and len(shared_cols) > 0:
+        with st.expander("Select taxa to include in the model"):
+            # Dictionary to hold user selections
+            taxa_selection = {}
+            for taxa in shared_cols:
+                taxa_selection[taxa] = st.checkbox(taxa, value=True)  # default checked
+
+            # Filter columns based on selections
+            selected_taxa = [taxa for taxa, include in taxa_selection.items() if include]
+
+            if len(selected_taxa) == 0:
+                st.warning("⚠️ No taxa selected. Predictions may fail.")
+            else:
+                # Apply selection to aligned data
+                X_train_aligned = X_train_aligned[selected_taxa]
+                X_test_aligned = X_test_aligned[selected_taxa]
     
     # === MAT Interactive Nearest Neighbors (t-SNE Space) ===
-    if model_choice == "MAT":
+    if model_choice == "MAT" or model_choice == "All":
+        if model_choice == "All":
+            mat_model = mat_model
+        else:
+            mat_model = model
+        
         st.subheader("🎯 MAT Nearest Neighbors Explorer (t-SNE Space)")
 
         from sklearn.manifold import TSNE
@@ -200,7 +274,7 @@ if train_climate_file and train_pollen_file and test_pollen_file:
         fossil_df["Predicted"] = fossil_df[f"Predicted_{target}"]
 
         # Get nearest neighbor info from MAT
-        neighbor_info = model.get_neighbors_info(X_test_aligned, train_meta, return_distance=True)
+        neighbor_info = mat_model.get_neighbors_info(X_test_aligned, train_meta, return_distance=True)
 
         # Build links dataframe
         link_rows = []
@@ -282,73 +356,6 @@ if train_climate_file and train_pollen_file and test_pollen_file:
             "Click a red fossil point to highlight its nearest modern analogues (orange) and connecting lines. "
             "Other points fade out."
         )
-
-
-    # Combine predictions into dataframe
-    df_preds = pd.DataFrame({"Age": ages.values})
-    for name, preds in predictions_dict.items():
-        df_preds[f"{name}_{target}"] = preds
-
-    # Set Age as index
-    df_plot = df_preds.set_index("Age")
-    
-    # Sidebar smoothing control
-    smoothing_sigma = st.slider(
-        "Gaussian smoothing (σ)", 
-        min_value=0.0, 
-        max_value=10.0, 
-        value=2.0, 
-        step=0.1
-    )
-
-    # Apply Gaussian smoothing to all prediction columns
-    if smoothing_sigma > 0:
-        smoothed_df = df_plot.apply(lambda col: gaussian_filter1d(col, sigma=smoothing_sigma))
-        smoothed_df = smoothed_df.add_suffix("_smoothed")
-        df_plot_combined = pd.concat([df_plot, smoothed_df], axis=1).reset_index()
-    else:
-        df_plot_combined = df_plot.reset_index()
-
-    # Melt dataframe for Altair
-    df_melted = df_plot_combined.melt(id_vars="Age", var_name="Model", value_name="Prediction")
-
-    # Define line thickness
-    df_melted["Thickness"] = df_melted["Model"].apply(lambda x: 4 if "_smoothed" in x else 1)
-
-    # Altair chart
-    chart = (
-        alt.Chart(df_melted)
-        .mark_line()
-        .encode(
-            x=alt.X("Age", title="Age"),
-            y=alt.Y("Prediction", title=target, scale=alt.Scale(zero=False)),  # dynamic y
-            color="Model",
-            strokeWidth="Thickness"
-        )
-        .interactive()
-    )
-
-    # Display chart in Streamlit
-    st.altair_chart(chart, use_container_width=True)
-
-    # Display CV metrics in nice format
-    if metrics_display:
-        st.subheader("📊 Cross-validation Metrics")
-        metrics_df = pd.DataFrame(metrics_display).set_index("Model")
-        st.table(metrics_df)
-
-    # Display predictions
-    st.subheader("Predictions")
-    st.write(df_preds)
-
-    # Download
-    csv = df_preds.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="Download predictions as CSV",
-        data=csv,
-        file_name="predictions.csv",
-        mime="text/csv",
-    )
     
     if train_pollen_file and coords_file:
         output_html = "map_output.html"
