@@ -108,17 +108,19 @@ Features:
 - [X] R² + RMSE metrics  
 - [X] Cross-validation results / bootstrapping  
 - [X] Map for analogues  
-- [ ] Neighbours for analogues
+- [X] Neighbours for analogues
 - [ ] Trees visualisation
 - [ ] Fix WAPLS
+- [ ] Move models above everything
+- [ ] Fix scatter plot (fossil layer)
 - [X] Selection of taxa to include / exclude  
 - [ ] Visualise imported files  
 - [ ] Feature importance  
 - [ ] Harmonisation checker  
+- [X] Pollen diagram (presence over time: % and counts)
+- [X] Plot records on 2D Variable graph (for example TANN/PANN)
 - [ ] Author info
 - [ ] Dummy dataset
 - [ ] Saving system
 - [ ] Invert X axis (age)
 - [ ] Language choice (?) 
-- [X] Pollen diagram (presence over time: % and counts)
-- [X] Plot records on 2D Variable graph (for example TANN/PANN)
