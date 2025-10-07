@@ -102,25 +102,25 @@ Features:
 
 ## Coming Features
 
+- [ ] Check maths
+- [ ] Error / trend — check existing code
+- [ ] Fix WAPLS
+- [ ] Fix scatter plot (fossil layer)
+- [ ] Visualise imported files  
+- [ ] Feature importance  
+- [ ] Harmonisation checker  
 - [X] Model parameter section (BRT iteration)  
 - [X] Smoothing  
-- [ ] Error / trend — check existing code  
 - [X] R² + RMSE metrics  
 - [X] Cross-validation results / bootstrapping  
 - [X] Map for analogues  
 - [X] Neighbours for analogues
-- [ ] Trees visualisation
-- [ ] Fix WAPLS
-- [ ] Move models above everything
-- [ ] Fix scatter plot (fossil layer)
+- [X] Trees visualisation
+- [X] Move models above everything
 - [X] Selection of taxa to include / exclude  
-- [ ] Visualise imported files  
-- [ ] Feature importance  
-- [ ] Harmonisation checker  
 - [X] Pollen diagram (presence over time: % and counts)
 - [X] Plot records on 2D Variable graph (for example TANN/PANN)
 - [ ] Author info
 - [ ] Dummy dataset
 - [ ] Saving system
 - [ ] Invert X axis (age)
-- [ ] Language choice (?) 
