@@ -1,6 +1,6 @@
 # 🌿 PyLaeo: A Python tool for Palaeoecological Statistical Modeling
 
-PyLaeo is an interactive software tool for proxy-based climate reconstruction and analysis. It allows users to import palaeoecological proxy data—such as fossil pollen, sediments, or other biological indicators—and apply multiple statistical and machine learning methods to reconstruct past climate conditions. The app provides instant model training, validation, and visualization, offering insights into model performance, feature importance, and uncertainty. Users can explore reconstructed climate variables through dynamic plots, comparative analyses, and summary statistics, making it a comprehensive platform for both research and teaching in palaeoclimatology.
+PyLaeo is an interactive tool for proxy-based climate reconstruction and analysis. It allows users to import palaeoecological proxy data—such as fossil pollen, sediments, or other biological indicators—and apply multiple statistical and machine learning methods to reconstruct past climate conditions. The app provides instant model training, validation, and visualization, offering insights into model performance, feature importance, and uncertainty. Users can explore reconstructed climate variables through dynamic plots, comparative analyses, and summary statistics, making it a comprehensive platform for both research and teaching in palaeoclimatology.
 
 This project implements multiple methods for quantitative palaeoclimate reconstruction from fossil pollen data, including:
 
