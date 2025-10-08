@@ -100,17 +100,24 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file,
     df_melted = df_plot_combined.melt(id_vars="Age", var_name="Model", value_name="Prediction")
     df_melted["Thickness"] = df_melted["Model"].apply(lambda x: 4 if "_smoothed" in x else 1)
 
+    # --- Toggle for mirroring X axis ---
+    mirror_x = st.checkbox("Mirror Age axis (decreasing)", value=False)
+
+    # --- Build Altair chart with optional mirrored X ---
+    x_scale = alt.Scale(zero=False, reverse=mirror_x)
+
     chart = (
         alt.Chart(df_melted)
         .mark_line()
         .encode(
-            x="Age",
+            x=alt.X("Age", scale=x_scale),
             y=alt.Y("Prediction", scale=alt.Scale(zero=False)),
             color="Model",
             strokeWidth="Thickness"
         )
         .interactive()
     )
+
     st.altair_chart(chart, use_container_width=True)
 
     # --- Cross-validation Metrics ---
