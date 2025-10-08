@@ -104,7 +104,7 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file, taxa_mask_
     # --- Radar plot ---
     st.subheader("🕸️ Radar Plot of Model Performance (interactive)")
     metrics_df = pd.DataFrame(metrics_table).set_index("Model")
-    df_norm = metrics_df[["r", "R²", "Spearman", "KGE"]].fillna(0.0)
+    df_norm = metrics_df[["Pearson R", "R²", "Spearman", "KGE"]].fillna(0.0)
     categories = list(df_norm.columns)
 
     fig = go.Figure()
