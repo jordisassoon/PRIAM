@@ -32,7 +32,7 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file, coords_fil
 
         taxa_list = [c for c in pollen_df.columns if c != "OBSNAME"]
         selected_taxa = st.selectbox("Select taxa for distribution plot", taxa_list)
-        bins = st.slider("Number of bins for target variable", 3, 50, 25)
+        bins = st.slider("Number of bins for target variable", 1, 500, 25)
 
         merged_df = pd.merge(pollen_df, climate_df, on="OBSNAME", how="inner")
         merged_df["binned_target"] = pd.cut(merged_df[selected_target], bins=bins)

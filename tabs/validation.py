@@ -70,7 +70,7 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file, taxa_mask_
         metrics_table.append({
             "Model": name,
             "R²": np.mean(scores["r2"]),
-            "r": np.mean(scores["r"]),
+            "Pearson R": np.mean(scores["r"]),
             "Spearman": np.mean(scores["spearman"]),
             "KGE": np.mean(scores["kge"]),
         })
@@ -81,7 +81,7 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file, taxa_mask_
             "RMSE": f"{np.mean(scores['rmse']):.2f} ± {np.std(scores['rmse']):.2f}",
             "MAE": f"{np.mean(scores['mae']):.2f} ± {np.std(scores['mae']):.2f}",
             "R²": f"{np.mean(scores['r2']):.2f} ± {np.std(scores['r2']):.2f}",
-            "r": f"{np.mean(scores['r']):.2f} ± {np.std(scores['r']):.2f}",
+            "Pearson R": f"{np.mean(scores['r']):.2f} ± {np.std(scores['r']):.2f}",
             "Spearman": f"{np.mean(scores.get('spearman', [0])):.2f} ± {np.std(scores.get('spearman', [0])):.2f}",
             "KGE": f"{np.mean(scores['kge']):.2f} ± {np.std(scores['kge']):.2f}",
             "Bias": f"{np.mean(scores['bias']):.2f} ± {np.std(scores['bias']):.2f}"

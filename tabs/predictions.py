@@ -43,7 +43,7 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file,
     available_models = {
         "MAT": (MAT, {"n_neighbors": n_neighbors}),
         "BRT": (BRT, {"n_estimators": brt_trees, "learning_rate": 0.05, "max_depth": 6, "random_state": random_seed}),
-        "WAPLS": (WAPLS, {"n_components": 5, "weighted": True}),
+        # "WAPLS": (WAPLS, {"n_components": 5, "weighted": True}),
         "RF": (RF, {"n_estimators": rf_trees, "max_depth": 6, "random_state": random_seed})
     }
 
