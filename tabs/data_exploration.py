@@ -53,6 +53,8 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file, coords_fil
         )
         st.altair_chart(chart, use_container_width=True)
 
+    # === TAXA DISTRIBUTION SECTION ===
+    st.subheader("🌍 Site Coordinates Map")
     # === MAP SECTION ===
     if train_pollen_file and coords_file:
         output_html = "map_output.html"
