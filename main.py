@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 from utils.dataloader import PollenDataLoader
-from utils.cross_validate import run_grouped_cv
+from PyLaeo.validation.cross_validate import run_grouped_cv
 from models.mat import MAT
 from models.brt import BRT
 from models.wa_pls import WA_PLS

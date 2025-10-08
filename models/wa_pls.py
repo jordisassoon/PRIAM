@@ -1,56 +1,119 @@
 import numpy as np
-from sklearn.cross_decomposition import PLSRegression
-from tqdm import tqdm
 
-class WA_PLS:
-    """
-    Weighted Averaging Partial Least Squares (WA-PLS) for pollen-based reconstructions.
-    """
-
-    def __init__(self, n_components=3):
+class WAPLS:
+    def __init__(self, n_components=2, weighted=False, standardize=True, lean=False):
         self.n_components = n_components
-        self.pls = None
-        self.taxa_weighted_env = None
-        self.X_modern = None
-        self.y_modern = None
+        self.weighted = weighted
+        self.standardize = standardize
+        self.lean = lean
 
-    def fit(self, X_modern, y_modern):
-        X_modern = np.asarray(X_modern, dtype=np.float32)
-        y_modern = np.asarray(y_modern, dtype=np.float32)
-        self.X_modern = X_modern
-        self.y_modern = y_modern
-        
-        # Compute column (taxon) sums
-        col_sums = X_modern.sum(axis=0)
+    def _to_float_array(self, arr, name):
+        arr = np.asarray(arr)
+        if arr.dtype == object:
+            try:
+                arr = arr.astype(float)
+            except Exception as e:
+                raise ValueError(f"{name} must be numeric. Problem: {e}")
+        return np.array(arr, dtype=float)
 
-        # Avoid division by zero: set zero-sum columns to 1 temporarily
-        safe_col_sums = np.where(col_sums == 0, 1.0, col_sums)
+    def fit(self, X, Y):
+        X = self._to_float_array(X, "X")
+        Y = self._to_float_array(Y, "Y").reshape(-1, 1)
+        nr, nc = X.shape
+        nPLS = self.n_components
 
-        # Compute taxon-wise weighted averages
-        self.taxa_weighted_env = np.dot(X_modern.T, y_modern) / safe_col_sums
+        spec_count = np.count_nonzero(X, axis=0)
 
-        # Set weights of originally zero-sum columns to zero
-        self.taxa_weighted_env[col_sums == 0] = 0.0
+        # Weighting and standardization
+        if not self.weighted:
+            self.meanY = float(Y.mean())
+            Yc = Y - self.meanY
+            R = np.ones((nr, 1))
+            if self.standardize:
+                C = X.std(axis=0, ddof=1).reshape(-1, 1)
+                C[C < 1e-12] = 1.0
+            else:
+                C = np.ones((nc, 1))
+        else:
+            C = X.sum(axis=0).reshape(-1, 1)
+            C[C < 1e-12] = 1.0
+            R = X.sum(axis=1).reshape(-1, 1)
+            Ytot = R.sum()
+            wtr = R / Ytot
+            self.meanY = float((Y.T @ wtr).item())
+            Yc = Y - self.meanY
 
-        # Compute WA predictions for modern samples
-        y_WA = np.dot(X_modern, self.taxa_weighted_env)
+        # Initial gradient
+        if not self.weighted:
+            g = X.T @ Yc / C
+            gamma0 = np.sum(g ** 2)
+        else:
+            Wc = C / C.sum()
+            g = X.T @ Yc / C
+            gamma0 = np.sum(g ** 2 * Wc)
 
-        # Residuals for PLS regression
-        residuals = y_modern - y_WA
-        self.pls = PLSRegression(n_components=self.n_components)
-        self.pls.fit(X_modern, residuals)
+        d = g.copy()
+        b = np.zeros((nc, 1))
+        T_list, P_list, meanT_list = [], [], []
 
-    def predict(self, X_query):
-        X_query = np.asarray(X_query, dtype=np.float32)
-        X_query_norm = X_query / X_query.sum(axis=1, keepdims=True)
-        y_WA = np.dot(X_query_norm, self.taxa_weighted_env)
-        residuals_pred = self.pls.predict(X_query).flatten()
-        return y_WA + residuals_pred
+        for i in range(nPLS):
+            if not self.weighted:
+                t = X @ (d / C)
+                if T_list:
+                    Tmat = np.column_stack(T_list)
+                    t -= Tmat @ (Tmat.T @ t / np.sum(Tmat ** 2, axis=0))
+                meant = t.mean()
+                t -= meant
+                tau = np.sum(t ** 2)
+            else:
+                t = (X @ d) / R
+                Wr = R / R.sum()
+                tau = np.sum((t ** 2) * Wr)
 
-    def predict_with_progress(self, X_query, batch_size=50):
-        predictions = []
-        for i in tqdm(range(0, X_query.shape[0], batch_size), desc="Predicting queries"):
-            X_batch = X_query[i:i+batch_size]
-            preds_batch = self.predict(X_batch)
-            predictions.extend(preds_batch)
-        return np.array(predictions)
+            if tau > 1e-12:
+                alpha = gamma0 / tau
+                b += d * alpha
+                Yc -= t * alpha
+
+                # Update gradient
+                if not self.weighted:
+                    g = X.T @ Yc / C
+                    gamma = np.sum(g ** 2)
+                else:
+                    g = X.T @ Yc / C
+                    gamma = np.sum(g ** 2 * Wc)
+
+                d = g + (gamma / gamma0) * d
+                gamma0 = gamma
+
+                T_list.append(t.flatten())
+                P_list.append(d.flatten())
+                if not self.weighted:
+                    meanT_list.append(meant * alpha)
+            else:
+                break
+
+        self.Beta = b.flatten()
+        self.T = np.column_stack(T_list) if T_list else np.empty((nr, 0))
+        self.P = np.column_stack(P_list) if P_list else np.empty((nc, 0))
+        self.meanT = np.array(meanT_list) if meanT_list else np.zeros(self.P.shape[1])
+        self.sdX = C.flatten() if not self.weighted else np.zeros(nc)
+        return self
+
+    def predict(self, X):
+        X = self._to_float_array(X, "X")
+        nr, nc = X.shape
+        Beta = self.Beta.reshape(-1, 1)
+        est = X @ Beta
+
+        if self.weighted:
+            row_sums = X.sum(axis=1).reshape(-1, 1)
+            row_sums[row_sums < 1e-12] = 1.0
+            est /= row_sums
+            est += self.meanY  # <— Add this line
+        else:
+            est += self.meanY
+            if self.meanT is not None and len(self.meanT) > 0:
+                est -= np.cumsum(self.meanT)[-1]
+
+        return est

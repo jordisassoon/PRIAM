@@ -1,92 +1,195 @@
 from tqdm import tqdm
 import numpy as np
+import pandas as pd
 from sklearn.neighbors import KNeighborsRegressor
 from utils.colors import TQDMColors
 
-class MAT:
-    def __init__(self, k=3):
-        """
-        Fast KNN wrapper implementing the Modern Analogue Technique (MAT) distance
-        commonly used in pollen-based reconstructions.
-        """
-        self.k = k
-        self.model = KNeighborsRegressor(n_neighbors=k, metric=self._mat_distance)
-        self._fitted_X = None  # store training data for neighbor access
-        self._fitted_y = None
 
-    def _mat_distance(self, x1, x2):
-        """
-        Modern Analogue Technique (MAT) distance metric.
-        Typically implemented as squared chord distance or other ecological dissimilarity.
-        Here we use squared chord distance:
-        d(x1, x2) = sqrt( sum( (sqrt(x1_i) - sqrt(x2_i))^2 ) )
-        """
-        x1 = np.array(x1)
-        x2 = np.array(x2)
-        return np.sqrt(np.sum((np.sqrt(x1) - np.sqrt(x2)) ** 2))
+class MAT(KNeighborsRegressor):
+    """
+    Modern Analogue Technique (MAT) using K-Nearest Neighbors.
 
-    def fit(self, X, y):
-        self._fitted_X = np.array(X)
-        self._fitted_y = np.array(y)
-        self.model.fit(X, y)
+    This class inherits from sklearn's KNeighborsRegressor and applies a
+    custom distance metric known as the squared chord distance, commonly
+    used in ecological and pollen-based reconstructions.
 
-    def predict(self, X):
-        return self.model.predict(X)
+    MAT adds convenience methods for:
+      - Batched predictions with progress tracking.
+      - Retrieving detailed information about nearest neighbors, including
+        metadata from a DataFrame.
+      - Exporting KNN parameters for reproducibility or logging.
 
-    def predict_with_progress(self, X_query, batch_size=50):
-        """
-        Predict query samples in batches and show progress with tqdm.
-        """
-        predictions = []
-        n_samples = X_query.shape[0]
-        
-        for i in tqdm(range(0, n_samples, batch_size),
-                      bar_format=TQDMColors.GREEN + '{l_bar}{bar}{r_bar}' + TQDMColors.ENDC,
-                      desc="Predicting queries"):
-            X_batch = X_query[i:i+batch_size]
-            preds_batch = self.predict(X_batch)
-            predictions.extend(preds_batch)
-        
-        return np.array(predictions)
+    Attributes
+    ----------
+    _fitted_X : np.ndarray
+        Training features stored after fitting.
+    _fitted_y : np.ndarray
+        Training targets stored after fitting.
+    """
 
-    def get_neighbors_info(self, X_query, metadata_df, return_distance=True):
+    def __init__(self, n_neighbors=3, **kwargs):
         """
-        Returns nearest neighbor info (indices, distances, and metadata) for query samples.
+        Initialize the MAT model.
 
         Parameters
         ----------
-        X_query : array-like
-            Query samples.
-        metadata_df : pd.DataFrame
-            DataFrame of training metadata (must align with fitted X).
-        return_distance : bool
-            Whether to return distances.
+        n_neighbors : int, default=3
+            Number of nearest neighbors to consider in predictions.
+        **kwargs : dict
+            Additional keyword arguments to pass to sklearn's KNeighborsRegressor.
+            Examples include `weights='distance'` or `algorithm='ball_tree'`.
+        """
+        # Initialize the KNeighborsRegressor with a custom metric and parallel processing.
+        # n_jobs=-1 ensures that all CPU cores are used for neighbor searches.
+        super().__init__(
+            n_neighbors=n_neighbors, metric=self._mat_distance, **kwargs
+        )
+
+        # Store training data internally for neighbor metadata queries.
+        self._fitted_X = None
+        self._fitted_y = None
+
+    @staticmethod
+    def _mat_distance(x1, x2):
+        """
+        Compute the squared chord distance between two samples.
+
+        This is the core distance metric used in MAT. It is commonly used
+        in ecological studies because it accounts for relative abundances
+        rather than absolute differences.
+
+        Formula:
+            d(x1, x2) = sum_i (sqrt(x1_i) - sqrt(x2_i))^2
+
+        Parameters
+        ----------
+        x1, x2 : array-like
+            Feature vectors of two samples. Typically representing relative
+            abundances or counts (e.g., pollen taxa percentages).
 
         Returns
         -------
-        List of dicts with structure:
-            [
-            {
-                'query_index': i,
-                'neighbors': [
-                {'index': j, 'distance': d, 'metadata': {...}},
-                ...
-                ]
-            },
-            ...
-            ]
+        float
+            Squared chord distance between x1 and x2.
         """
-        distances, indices = self.model.kneighbors(X_query, return_distance=return_distance)
+        x1 = np.asarray(x1)
+        x2 = np.asarray(x2)
+        return np.sum((np.sqrt(x1) - np.sqrt(x2)) ** 2)
+
+    def fit(self, X, y):
+        """
+        Fit the MAT model on training data.
+
+        This method stores the training data internally and then delegates
+        to sklearn's KNeighborsRegressor for fitting. Storing X and y
+        allows retrieval of neighbor metadata later.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Training features.
+        y : array-like of shape (n_samples,) or (n_samples, n_targets)
+            Target values.
+
+        Returns
+        -------
+        self : object
+            Fitted MAT instance.
+        """
+        # Convert inputs to numpy arrays for consistency.
+        self._fitted_X = np.asarray(X)
+        self._fitted_y = np.asarray(y)
+        return super().fit(self._fitted_X, self._fitted_y)
+
+    def predict_with_progress(self, X_query, batch_size=50):
+        """
+        Predict target values for query samples in batches with a progress bar.
+
+        Useful when predicting large datasets to track progress and avoid memory issues.
+
+        Parameters
+        ----------
+        X_query : array-like of shape (n_queries, n_features)
+            Query samples to predict.
+        batch_size : int, default=50
+            Number of samples to process per batch. Adjust based on memory availability.
+
+        Returns
+        -------
+        np.ndarray of shape (n_queries,)
+            Predicted target values for each query sample.
+        """
+        predictions = []
+        n_samples = X_query.shape[0]
+
+        # Loop in batches to reduce memory overhead and provide tqdm progress.
+        for i in tqdm(
+            range(0, n_samples, batch_size),
+            bar_format=TQDMColors.GREEN + "{l_bar}{bar}{r_bar}" + TQDMColors.ENDC,
+            desc="Predicting queries",
+        ):
+            X_batch = X_query[i : i + batch_size]
+            # Delegate to sklearn's predict for the batch.
+            predictions.extend(super().predict(X_batch))
+
+        return np.array(predictions)
+
+    def get_neighbors_info(
+        self, X_query, metadata_df: pd.DataFrame, return_distance=True
+    ):
+        """
+        Retrieve nearest neighbors along with metadata for each query sample.
+
+        This method returns a structured list containing the indices,
+        distances, and corresponding metadata of the nearest neighbors
+        for each query sample.
+
+        Parameters
+        ----------
+        X_query : array-like of shape (n_queries, n_features)
+            Query samples for which neighbors are to be retrieved.
+        metadata_df : pd.DataFrame
+            DataFrame containing metadata corresponding to training samples.
+            The length of metadata_df must match the number of training samples.
+        return_distance : bool, default=True
+            If True, include distances in the returned neighbor info.
+
+        Returns
+        -------
+        list of dict
+            Each element corresponds to a query sample and contains:
+            {
+                'query_index': int,
+                'neighbors': [
+                    {'index': int, 'distance': float, 'metadata': dict},
+                    ...
+                ]
+            }
+        """
+        distances, indices = self.kneighbors(X_query, return_distance=return_distance)
         results = []
 
-        for i in range(len(X_query)):
+        # Iterate over each query sample
+        for i, neighbors_idx in enumerate(indices):
             neighbor_info = []
-            for rank, idx in enumerate(indices[i]):
-                info = {'index': int(idx)}
+            for rank, idx in enumerate(neighbors_idx):
+                info = {"index": int(idx)}
                 if return_distance:
-                    info['distance'] = float(distances[i][rank])
-                info['metadata'] = metadata_df.iloc[idx].to_dict()
+                    info["distance"] = float(distances[i][rank])
+                # Extract metadata for the neighbor
+                info["metadata"] = metadata_df.iloc[idx].to_dict()
                 neighbor_info.append(info)
-            results.append({'query_index': i, 'neighbors': neighbor_info})
+            results.append({"query_index": i, "neighbors": neighbor_info})
 
         return results
+
+    def export_knn_params(self):
+        """
+        Export all KNN parameters for inspection or reproducibility.
+
+        Returns
+        -------
+        dict
+            Dictionary containing all parameters of the underlying KNeighborsRegressor.
+        """
+        return self.get_params()
