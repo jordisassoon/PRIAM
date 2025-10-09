@@ -101,3 +101,19 @@ Features:
 * Datasets are aligned automatically (non-overlapping taxa filled with zeros).
 * Predictions are saved with column name `Predicted_<target>`.
 * Tested on Linux (Python 3.10).
+
+## 👩‍🔬 Authors
+
+Dael Sassoon
+ — Palaeoecologist and Marie Curie Research Fellow (GEO3BCN-CSIC, Barcelona)
+Specialising in tropical palaeoecology and quantitative reconstruction of past climates. Developer of PRISM, integrating palaeoecological data with statistical and machine learning models for climate reconstruction.
+
+Jordan Sassoon
+ — Computer Scientist 
+Focused on applied AI, data systems, and scientific visualization. Lead developer of the PRISM interface, integrating backend modelling pipelines with an interactive analytical framework.
+
+## 🧠 Citation
+
+If you use PRISM in your research, please cite as:
+
+Sassoon, D., & Sassoon, J. (2025). PRISM: A tool for Palaeoclimatic Reconstruction & Interactive Statistical Modelling. GitHub repository: https://github.com/jordisassoon/PyLaeo
