@@ -105,11 +105,11 @@ Features:
 ## 👩‍🔬 Authors
 
 Dael Sassoon
- — Palaeoecologist and Marie Curie Research Fellow (GEO3BCN-CSIC, Barcelona)
+ — Palaeoecologist and Marie Curie Research Fellow (GEO3BCN-CSIC, Barcelona).
 Specialising in tropical palaeoecology and quantitative reconstruction of past climates. Developer of PRISM, integrating palaeoecological data with statistical and machine learning models for climate reconstruction.
 
 Jordan Sassoon
- — Computer Scientist 
+ — Computer Scientist. 
 Focused on applied AI, data systems, and scientific visualization. Lead developer of the PRISM interface, integrating backend modelling pipelines with an interactive analytical framework.
 
 ## 🧠 Citation
