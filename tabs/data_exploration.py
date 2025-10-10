@@ -10,6 +10,7 @@ from sklearn.manifold import TSNE
 import umap
 from sklearn.neighbors import KernelDensity
 import plotly.express as px
+import shutil
 
 from utils.map_utils import generate_map
 
@@ -55,16 +56,41 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file, coords_fil
 
     # === TAXA DISTRIBUTION SECTION ===
     st.subheader("🌍 Site Coordinates Map")
+    
+    # --- Toggle for topographic map ---
+    topo_toggle = st.checkbox("Show Topographic Map")
+
     # === MAP SECTION ===
     if train_pollen_file and coords_file:
         output_html = "map_output.html"
-        map_path = generate_map(train_pollen_file, coords_file, output_html=output_html)
-        st.markdown(f"[🌍 Open Interactive Map]({Path(map_path).resolve().as_uri()})", unsafe_allow_html=True)
+
+        # Generate the map (pass the tile type based on toggle)
+        tile_type = "Stamen Terrain" if topo_toggle else "OpenStreetMap"
+        map_path = generate_map(
+            train_pollen_file,
+            coords_file,
+            output_html=output_html,
+            topo=topo_toggle
+        )
+
+        # --- Embed in Streamlit ---
         with open(map_path, "r", encoding="utf-8") as f:
-            folium_html = f.read()
-        st.components.v1.html(folium_html, height=500, scrolling=True)
+            map_html = f.read()
+
+        st.components.v1.html(
+            map_html,
+            height=800,
+            scrolling=True
+        )
+
+        # --- Download button ---
         with open(map_path, "rb") as f:
-            st.download_button("Download Map HTML", f, file_name="map_output.html", mime="text/html")
+            st.download_button(
+                "Download Map HTML",
+                f,
+                file_name="map_output.html",
+                mime="text/html"
+            )
 
     # === TRAIN–TEST DISTRIBUTION COMPARISON ===
     if train_pollen_file and test_pollen_file:
