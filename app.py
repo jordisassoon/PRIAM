@@ -4,6 +4,15 @@ from streamlit_theme import st_theme
 
 st.set_page_config(page_title="Pollen Climate App", layout="wide", initial_sidebar_state="expanded")
 
+# Remove top padding
+st.markdown("""
+    <style>
+    .block-container {
+        padding-top: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 theme = st_theme()
 print(theme)
 try:
