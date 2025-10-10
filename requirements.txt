@@ -1,0 +1,10 @@
+streamlit
+plotly
+pandas
+numpy
+dtreeviz==1.4.0
+folium
+lightgbm
+scikit-learn
+tqdm
+umap-learn
