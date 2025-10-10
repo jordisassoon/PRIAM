@@ -18,7 +18,6 @@ class PollenDataLoader:
         # Try common delimiters
         for delimiter in [",", ";", "\t"]:
             try:
-                # uploaded_file.seek(0)  # Reset pointer before each try
                 df = pd.read_csv(uploaded_file, delimiter=delimiter, encoding=encoding)
                 if df.shape[1] > 1:  # Heuristic: more than 1 column means likely correct delimiter
                     return df
