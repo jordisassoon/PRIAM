@@ -52,6 +52,13 @@ rf_trees = st.sidebar.slider("RF trees", 1, 1000, 200)
 cv_folds = st.sidebar.slider("CV folds", 1, 10, 5)
 random_seed = st.sidebar.number_input("Random seed", value=42)
 
+# --- Toggle for Predictions Representation ---
+st.sidebar.header("Prediction Representation")
+prediction_axis = st.sidebar.radio(
+    "Show predictions by:",
+    ["Age", "Depth"]
+)
+
 # --- File uploads ---
 st.sidebar.header("Upload Data")
 train_climate_file = st.sidebar.file_uploader("Training Climate CSV", type=["csv"])
@@ -66,12 +73,14 @@ tabs = st.tabs(["🔮 Predictions", "📊 Data Exploration", "✅ Validation"])
 with tabs[0]:
     predictions.show_tab(
         train_climate_file, train_pollen_file, test_pollen_file,
-        taxa_mask_file, model_choice, target, n_neighbors, brt_trees, rf_trees, 1, random_seed
+        taxa_mask_file, model_choice, target, n_neighbors, brt_trees, rf_trees, 1, random_seed, 
+        axis=prediction_axis  # Pass axis toggle here
     )
 
 with tabs[1]:
     data_exploration.show_tab(
-        train_climate_file, train_pollen_file, test_pollen_file, coords_file
+        train_climate_file, train_pollen_file, test_pollen_file, coords_file, 
+        axis=prediction_axis  # Pass axis toggle here
     )
 
 with tabs[2]:

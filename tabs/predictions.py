@@ -19,7 +19,7 @@ from validation.cross_validate import run_grouped_cv
 
 def show_tab(train_climate_file, train_pollen_file, test_pollen_file,
              taxa_mask_file, model_choice, target,
-             n_neighbors, brt_trees, rf_trees, cv_folds, random_seed):
+             n_neighbors, brt_trees, rf_trees, cv_folds, random_seed, axis):
 
     st.header("📊 Predictions & Model Visualizations")
 

@@ -14,7 +14,7 @@ import shutil
 
 from utils.map_utils import generate_map
 
-def show_tab(train_climate_file, train_pollen_file, test_pollen_file, coords_file):
+def show_tab(train_climate_file, train_pollen_file, test_pollen_file, coords_file, axis):
     st.header("📈 Data Exploration: Distribution & Train–Test Comparison")
 
     # === TAXA DISTRIBUTION SECTION ===
