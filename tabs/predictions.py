@@ -24,7 +24,23 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file,
     st.header("📊 Predictions & Model Visualizations")
 
     if not (train_climate_file and train_pollen_file and test_pollen_file):
-        st.info("Please upload all required files to run predictions.")
+        st.warning("Please upload all required files to run predictions.")
+        return
+    
+    try:
+        train_climate_file.seek(0)
+    except:
+        st.warning("Please upload the training climate dataset.")
+        return
+    try:
+        train_pollen_file.seek(0)
+    except:
+        st.warning("Please upload the training pollen dataset.")
+        return
+    try:
+        test_pollen_file.seek(0)
+    except:
+        st.warning("Please upload the test pollen dataset.")
         return
 
     # --- Load Data ---

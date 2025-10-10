@@ -26,9 +26,16 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file, coords_fil
         selected_target = st.selectbox("Select target climate variable", target_options)
 
         # Load data
-        train_climate_file.seek(0)
+        try:
+            train_climate_file.seek(0)
+        except:
+            st.warning("Please upload the training climate dataset.")
         climate_df = pd.read_csv(train_climate_file, encoding="latin1")
-        train_pollen_file.seek(0)
+        
+        try:
+            train_pollen_file.seek(0)
+        except:
+            st.warning("Please upload the training pollen dataset.")
         pollen_df = pd.read_csv(train_pollen_file, encoding="latin1")
 
         taxa_list = [c for c in pollen_df.columns if c != "OBSNAME"]
@@ -91,7 +98,9 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file, coords_fil
                 file_name="map_output.html",
                 mime="text/html"
             )
-
+    else:
+        st.warning("Please upload the training pollen coordinates dataset.")
+        
     # === TRAIN–TEST DISTRIBUTION COMPARISON ===
     if train_pollen_file and test_pollen_file:
         st.subheader("📊 Train vs Test Distribution Comparison")

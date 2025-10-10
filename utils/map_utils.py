@@ -2,6 +2,7 @@ import pandas as pd
 import folium
 from folium.plugins import Fullscreen
 import branca.colormap as cm
+import streamlit as st
 
 def generate_map(
     pollen_file,
@@ -14,8 +15,7 @@ def generate_map(
     topo=False  # toggle topographic map
 ):
     # --- Read CSVs ---
-    pollen_file.seek(0)
-    coords_file.seek(0)
+    
     pollen_df = pd.read_csv(pollen_file, delimiter=',', encoding="latin1")
     coords_df = pd.read_csv(coords_file, delimiter=',', encoding="latin1")
     merged_df = pd.merge(pollen_df, coords_df, on=sample_id_col, how="inner")

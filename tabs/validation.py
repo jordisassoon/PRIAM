@@ -29,9 +29,22 @@ def show_tab(train_climate_file, train_pollen_file, test_pollen_file, taxa_mask_
         st.warning("Please upload both climate and pollen training datasets.")
         return
 
-    train_climate_file.seek(0)
-    train_pollen_file.seek(0)
-    test_pollen_file.seek(0)
+    try:
+        train_climate_file.seek(0)
+    except:
+        st.warning("Please upload the training climate dataset.")
+        return
+    try:
+        train_pollen_file.seek(0)
+    except:
+        st.warning("Please upload the training pollen dataset.")
+        return
+    try:
+        test_pollen_file.seek(0)
+    except:
+        st.warning("Please upload the test pollen dataset.")
+        return
+    
     # --- Load data ---
     loader = PollenDataLoader(
         climate_file=train_climate_file,
