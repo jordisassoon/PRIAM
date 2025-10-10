@@ -27,7 +27,6 @@ def is_light_color(hex_color):
     return luminance > 128  # threshold (0–255 scale)
 
 theme = st_theme()
-print(theme)
 
 try:
     bg_color = theme.get("secondaryBackgroundColor", "#FFFFFF")

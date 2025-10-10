@@ -3,6 +3,8 @@ import numpy as np
 from typing import Tuple, Iterator
 from sklearn.model_selection import GroupKFold
 
+from utils.csv_loader import read_csv_auto_delimiter
+
 class PollenDataLoader:
     def __init__(self, climate_file: str, pollen_file: str, test_file: str, mask_file: str = None):
         self.climate_file = climate_file
@@ -13,28 +15,16 @@ class PollenDataLoader:
     def _normalize_rows(self, df: pd.DataFrame) -> pd.DataFrame:
         row_sums = df.sum(axis=1)
         return df.div(row_sums.replace(0, np.nan), axis=0).fillna(0)
-    
-    def read_csv_auto_delimiter(self, uploaded_file, encoding="latin1"):
-        # Try common delimiters
-        for delimiter in [",", ";", "\t"]:
-            try:
-                df = pd.read_csv(uploaded_file, delimiter=delimiter, encoding=encoding)
-                if df.shape[1] > 1:  # Heuristic: more than 1 column means likely correct delimiter
-                    return df
-            except Exception:
-                continue
-        # If none worked, raise error
-        raise ValueError("Could not detect delimiter automatically.")
 
     def load_training_data(self, target: str = "TANN") -> Tuple[pd.DataFrame, pd.Series, pd.Series]:
         """
         Load and merge climate and pollen training data.
         Returns X, y, and obs_names (for grouped CV).
         """
-        climate_df = self.read_csv_auto_delimiter(self.climate_file)
-        pollen_df = self.read_csv_auto_delimiter(self.pollen_file)
+        climate_df = read_csv_auto_delimiter(self.climate_file)
+        pollen_df = read_csv_auto_delimiter(self.pollen_file)
         if self.mask_file:
-            mask_df = self.read_csv_auto_delimiter(self.mask_file)
+            mask_df = read_csv_auto_delimiter(self.mask_file)
         
         if "ï»¿OBSNAME" in climate_df.columns:
             climate_df = climate_df.rename(columns={"ï»¿OBSNAME": "OBSNAME"})
@@ -77,9 +67,9 @@ class PollenDataLoader:
         return X_taxa, y, obs_names
 
     def load_test_data(self) -> Tuple[pd.DataFrame, pd.Series]:
-        test_df = self.read_csv_auto_delimiter(self.test_file)
+        test_df = read_csv_auto_delimiter(self.test_file)
         if self.mask_file:
-            mask_df = self.read_csv_auto_delimiter(self.mask_file)
+            mask_df = read_csv_auto_delimiter(self.mask_file)
 
         meta_cols = ["Depth", "Age", "OBSNAME"]
         ages = test_df["Age"] if "Age" in test_df.columns else pd.Series(np.arange(len(test_df)))

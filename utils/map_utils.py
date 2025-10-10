@@ -4,6 +4,8 @@ from folium.plugins import Fullscreen
 import branca.colormap as cm
 import streamlit as st
 
+from utils.csv_loader import read_csv_auto_delimiter
+
 def generate_map(
     pollen_file,
     coords_file,
@@ -16,8 +18,8 @@ def generate_map(
 ):
     # --- Read CSVs ---
     
-    pollen_df = pd.read_csv(pollen_file, delimiter=',', encoding="latin1")
-    coords_df = pd.read_csv(coords_file, delimiter=',', encoding="latin1")
+    pollen_df = read_csv_auto_delimiter(pollen_file)
+    coords_df = read_csv_auto_delimiter(coords_file)
     merged_df = pd.merge(pollen_df, coords_df, on=sample_id_col, how="inner")
 
     # --- Map center ---
