@@ -14,7 +14,7 @@ target = st.sidebar.selectbox(
 n_neighbors = st.sidebar.slider("MAT neighbors", 1, 20, 5)
 brt_trees = st.sidebar.slider("BRT trees", 1, 1000, 200)
 rf_trees = st.sidebar.slider("RF trees", 1, 1000, 200)
-cv_folds = st.sidebar.slider("CV folds", 1, 10, 4)
+cv_folds = st.sidebar.slider("CV folds", 1, 10, 5)
 random_seed = st.sidebar.number_input("Random seed", value=42)
 
 # File uploads
