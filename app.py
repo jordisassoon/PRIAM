@@ -13,17 +13,31 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+def hex_to_rgb(value):
+    """Convert hex color (e.g., '#AABBCC') to (R, G, B) tuple."""
+    value = value.lstrip('#')
+    lv = len(value)
+    return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+
+def is_light_color(hex_color):
+    """Determine if a color is light based on luminance."""
+    r, g, b = hex_to_rgb(hex_color)
+    # Calculate relative luminance (per W3C)
+    luminance = 0.2126*r + 0.7152*g + 0.0722*b
+    return luminance > 128  # threshold (0–255 scale)
+
 theme = st_theme()
 print(theme)
+
 try:
-    if theme["base"] == "light":
-        st.sidebar.image("assets/PRISM_full_logo.svg", use_container_width=True)  # <-- Place your logo in an 'assets' folder
-    elif theme["base"] == "dark":
-        st.sidebar.image("assets/PRISM_full_logo_white.svg", use_container_width=True)  # <-- Place your logo in an 'assets' folder
+    bg_color = theme.get("secondaryBackgroundColor", "#FFFFFF")
+    if is_light_color(bg_color):
+        st.sidebar.image("assets/PRISM_full_logo.svg", use_container_width=True)
     else:
-        st.sidebar.image("assets/PRISM_full_logo.svg", use_container_width=True)  # <-- Place your logo in an 'assets' folder
-except:
-    st.sidebar.image("assets/PRISM_full_logo.svg", use_container_width=True)  # <-- Place your logo in an 'assets' folder
+        st.sidebar.image("assets/PRISM_full_logo_white.svg", use_container_width=True)
+except Exception as e:
+    print("Theme error:", e)
+    st.sidebar.image("assets/PRISM_full_logo.svg", use_container_width=True)
 
 # --- Shared Inputs (in Sidebar) ---
 st.sidebar.header("Model Configuration")
