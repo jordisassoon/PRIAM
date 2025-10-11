@@ -1,4 +1,4 @@
-# 🌿 PRISM: A tool for Palaeoclimatic Reconstruction & Interactive Statistical Modelling 
+# 🌿 PRISM: A tool for Palaeoclimatic Reconstruction through Interactive Statistical Modelling 
 
 PRISM is an interactive tool for proxy-based climate reconstruction and analysis. It allows users to import palaeoecological proxy data—such as fossil pollen, sediments, or other biological indicators—and apply multiple statistical and machine learning methods to reconstruct past climate conditions. The app provides instant model training, validation, and visualization, offering insights into model performance, feature importance, and uncertainty. Users can explore reconstructed climate variables through dynamic plots, comparative analyses, and summary statistics, making it a comprehensive platform for both research and teaching in palaeoclimatology.
 
@@ -116,4 +116,4 @@ Focused on applied AI, data systems, and scientific visualization. Lead develope
 
 If you use PRISM in your research, please cite as:
 
-Sassoon, D., & Sassoon, J. (2025). PRISM: A tool for Palaeoclimatic Reconstruction & Interactive Statistical Modelling. GitHub repository: https://github.com/jordisassoon/PyLaeo
+Sassoon, D., & Sassoon, J. (2025). PRISM: A tool for Palaeoclimatic Reconstruction through Interactive Statistical Modelling. GitHub repository: https://github.com/jordisassoon/PyLaeo
