@@ -199,7 +199,7 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
         pca_df["Set"] = labels
         fig_pca = px.scatter(
             pca_df, x="PC1", y="PC2", color="Set", title="PCA Projection",
-            color_discrete_map={"Train": "blue", "Test": "red"}
+            color_discrete_map={"Train": "#17becf", "Test": "red"}
         )
         st.plotly_chart(fig_pca, use_container_width=True)
 
@@ -208,7 +208,7 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
         tsne_df["Set"] = labels
         fig_tsne = px.scatter(
             tsne_df, x="Dim1", y="Dim2", color="Set", title="t-SNE Projection",
-            color_discrete_map={"Train": "blue", "Test": "red"}
+            color_discrete_map={"Train": "#17becf", "Test": "red"}
         )
         st.plotly_chart(fig_tsne, use_container_width=True)
 
@@ -217,7 +217,7 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
         umap_df["Set"] = labels
         fig_umap = px.scatter(
             umap_df, x="UMAP1", y="UMAP2", color="Set", title="UMAP Projection",
-            color_discrete_map={"Train": "blue", "Test": "red"}
+            color_discrete_map={"Train": "#17becf", "Test": "red"}
         )
         st.plotly_chart(fig_umap, use_container_width=True)
 

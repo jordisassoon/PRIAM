@@ -67,6 +67,26 @@ def show_tab(
     X_test, ages = loader.load_test_data()
     X_train_aligned, X_test_aligned, shared_cols = loader.align_taxa(X_train, X_test)
 
+    # --- Taxa selection expander ---
+    if shared_cols is not None and len(shared_cols) > 0:
+        with st.expander("Select taxa to include in the model"):
+            # Dictionary to hold user selections
+            taxa_selection = {}
+            for taxa in shared_cols:
+                taxa_selection[taxa] = st.checkbox(taxa, value=True)  # default checked
+
+            # Filter columns based on selections
+            selected_taxa = [
+                taxa for taxa, include in taxa_selection.items() if include
+            ]
+
+            if len(selected_taxa) == 0:
+                st.warning("⚠️ No taxa selected. Predictions may fail.")
+            else:
+                # Apply selection to aligned data
+                X_train_aligned = X_train_aligned[selected_taxa]
+                X_test_aligned = X_test_aligned[selected_taxa]
+
     # --- Prepare Models ---
     available_models = {
         "MAT": (MAT, {"n_neighbors": n_neighbors}),
@@ -157,15 +177,19 @@ def show_tab(
 
     # --- Build Altair chart with optional mirrored X ---
     x_scale = alt.Scale(zero=False, reverse=mirror_x)
+    
+    df_melted["Type"] = df_melted["Model"].apply(lambda x: "smoothed" if "_smoothed" in x else "per sample")
 
+    # Optionally, keep original Model for hover info
     chart = (
         alt.Chart(df_melted)
         .mark_line()
         .encode(
-            x=alt.X("Age", scale=x_scale),
+            x=alt.X("Age", scale=alt.Scale(zero=False, reverse=mirror_x)),
             y=alt.Y("Prediction", scale=alt.Scale(zero=False)),
-            color="Model",
-            strokeWidth="Thickness",
+            color=alt.Color("Type", title=""),  # This will show only "per sample" / "smoothed"
+            strokeWidth=alt.StrokeWidth("Thickness", legend=None),
+            tooltip=["Model", "Prediction"]  # optional: show exact model on hover
         )
         .interactive()
     )
@@ -175,26 +199,6 @@ def show_tab(
     # --- Show DataFrame in Streamlit ---
     st.subheader("Prediction Data Table")
     st.dataframe(df_preds)  # 👈 Interactive table
-
-    # --- Taxa selection expander ---
-    if shared_cols is not None and len(shared_cols) > 0:
-        with st.expander("Select taxa to include in the model"):
-            # Dictionary to hold user selections
-            taxa_selection = {}
-            for taxa in shared_cols:
-                taxa_selection[taxa] = st.checkbox(taxa, value=True)  # default checked
-
-            # Filter columns based on selections
-            selected_taxa = [
-                taxa for taxa, include in taxa_selection.items() if include
-            ]
-
-            if len(selected_taxa) == 0:
-                st.warning("⚠️ No taxa selected. Predictions may fail.")
-            else:
-                # Apply selection to aligned data
-                X_train_aligned = X_train_aligned[selected_taxa]
-                X_test_aligned = X_test_aligned[selected_taxa]
 
     # === MAT Interactive Nearest Neighbors (t-SNE Space) ===
     if model_choice == "MAT" or model_choice == "All":
@@ -278,15 +282,21 @@ def show_tab(
         # Altair selection
         fossil_select = alt.selection_point(fields=["OBSNAME"], on="click")
 
-        # Base scatter
+        # Define PlotType for fossils/modern
+        combined_df["PlotType"] = combined_df["Type"].apply(lambda t: "Fossil" if t == "Fossil" else "Modern")
+        links_df["PlotType"] = "Neighbor"
+
+        # Base scatter: Fossil + Modern
         base = (
             alt.Chart(combined_df)
             .mark_circle()
             .encode(
-                x=alt.X("TSNE1:Q", scale=alt.Scale(domain=(tsne1_min, tsne1_max))),
-                y=alt.Y("TSNE2:Q", scale=alt.Scale(domain=(tsne2_min, tsne2_max))),
-                color=alt.condition(
-                    alt.datum.Type == "Fossil", alt.value("red"), alt.value("steelblue")
+                x=alt.X("TSNE1:Q", title="t-SNE 1", scale=alt.Scale(domain=(tsne1_min, tsne1_max))),
+                y=alt.Y("TSNE2:Q", title="t-SNE 2", scale=alt.Scale(domain=(tsne2_min, tsne2_max))),
+                color=alt.Color(
+                    "PlotType:N",
+                    scale=alt.Scale(domain=["Fossil", "Modern", "Neighbor"], range=["red", "steelblue", "orange"]),
+                    legend=alt.Legend(title="Point Type")
                 ),
                 opacity=alt.condition(fossil_select, alt.value(1.0), alt.value(0.3)),
                 tooltip=["OBSNAME:N", "Type:N", "Predicted:Q"],
@@ -294,19 +304,24 @@ def show_tab(
             .add_params(fossil_select)
         )
 
-        # Highlight neighbors
-        neighbor_highlight = (
+        # Neighbor points: orange, only show when fossil is selected
+        neighbor_points = (
             alt.Chart(links_df)
-            .mark_circle(size=120, color="orange")
+            .mark_circle()
             .encode(
                 x="modern_TSNE1:Q",
                 y="modern_TSNE2:Q",
+                color=alt.Color(
+                    "PlotType:N",
+                    scale=alt.Scale(domain=["Fossil", "Modern", "Neighbor"], range=["red", "steelblue", "orange"]),
+                    legend=alt.Legend(title="Point Type")
+                ),
                 tooltip=["neighbor:N", "distance:Q"],
+                opacity=alt.condition(fossil_select, alt.value(1.0), alt.value(0.0)),
             )
-            .transform_filter(fossil_select)
         )
 
-        # Connections
+        # Connections: lines between fossils and neighbors
         connections = (
             alt.Chart(links_df)
             .mark_line(color="orange", opacity=0.6)
@@ -320,9 +335,9 @@ def show_tab(
             .transform_filter(fossil_select)
         )
 
-        # Combine charts using alt.layer()
+        # Combine layers
         chart = (
-            alt.layer(base, neighbor_highlight, connections)
+            alt.layer(base, neighbor_points, connections)
             .resolve_scale(x="shared", y="shared")
             .interactive()
         )
@@ -334,6 +349,7 @@ def show_tab(
             "Click a red fossil point to highlight its nearest modern analogues (orange) and connecting lines. "
             "Other points fade out."
         )
+
 
     # --- RF/BRT Tree Visualization ---
     if model_choice in ["RF", "All"]:
