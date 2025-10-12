@@ -6,9 +6,9 @@ from sklearn.model_selection import GroupKFold
 from utils.csv_loader import read_csv_auto_delimiter
 
 class ProxyDataLoader:
-    def __init__(self, climate_file: str, pollen_file: str, test_file: str, mask_file: str = None):
+    def __init__(self, climate_file: str, proxy_file: str, test_file: str, mask_file: str = None):
         self.climate_file = climate_file
-        self.pollen_file = pollen_file
+        self.proxy_file = proxy_file
         self.test_file = test_file
         self.mask_file = mask_file
 
@@ -18,27 +18,27 @@ class ProxyDataLoader:
 
     def load_training_data(self, target: str = "TANN") -> Tuple[pd.DataFrame, pd.Series, pd.Series]:
         """
-        Load and merge climate and pollen training data.
+        Load and merge climate and proxy training data.
         Returns X, y, and obs_names (for grouped CV).
         """
         climate_df = read_csv_auto_delimiter(self.climate_file)
-        pollen_df = read_csv_auto_delimiter(self.pollen_file)
+        proxy_df = read_csv_auto_delimiter(self.proxy_file)
         if self.mask_file:
             mask_df = read_csv_auto_delimiter(self.mask_file)
         
         if "ï»¿OBSNAME" in climate_df.columns:
             climate_df = climate_df.rename(columns={"ï»¿OBSNAME": "OBSNAME"})
-        if "ï»¿OBSNAME" in pollen_df.columns:
-            pollen_df = pollen_df.rename(columns={"ï»¿OBSNAME": "OBSNAME"})
+        if "ï»¿OBSNAME" in proxy_df.columns:
+            proxy_df = proxy_df.rename(columns={"ï»¿OBSNAME": "OBSNAME"})
 
-        if "OBSNAME" not in pollen_df.columns:
+        if "OBSNAME" not in proxy_df.columns:
             raise ValueError("Pollen file must contain an OBSNAME column for grouped CV.")
 
-        obs_names = pollen_df["OBSNAME"]
+        obs_names = proxy_df["OBSNAME"]
 
         # Drop non-numeric columns for taxa
-        taxa_cols = [c for c in pollen_df.columns if c != "OBSNAME"]
-        X_taxa = pollen_df[taxa_cols]
+        taxa_cols = [c for c in proxy_df.columns if c != "OBSNAME"]
+        X_taxa = proxy_df[taxa_cols]
         if self.mask_file:
             X_taxa = self.filter_taxa_by_mask(X_taxa, mask_df)
 
