@@ -2,7 +2,7 @@ import streamlit as st
 from tabs import predictions, data_exploration, validation
 from streamlit_theme import st_theme
 
-st.set_page_config(page_title="Pollen Climate App", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="PRISM Online", layout="wide", initial_sidebar_state="expanded")
 
 # Remove top padding
 st.markdown("""
@@ -67,25 +67,30 @@ test_pollen_file = st.sidebar.file_uploader("Test Fossil Pollen CSV", type=["csv
 taxa_mask_file = st.sidebar.file_uploader("Taxa mask CSV", type=["csv"])
 coords_file = st.sidebar.file_uploader("Coordinates file (CSV)", type=["csv"])
 
-# --- Top Tabs ---
-tabs = st.tabs(["🔮 Predictions", "📊 Data Exploration", "✅ Validation"])
+tab_selection = st.segmented_control(
+    "Select section:",  # still required, but hidden
+    options=["Predictions", "Data Exploration", "Validation"],
+    default="Predictions",
+    selection_mode="single",
+    label_visibility="collapsed"  # 👈 hides the label from the UI
+)
 
-with tabs[0]:
+if tab_selection == "Predictions":
     predictions.show_tab(
         train_climate_file, train_pollen_file, test_pollen_file,
-        taxa_mask_file, model_choice, target, n_neighbors, brt_trees, rf_trees, 1, random_seed, 
-        axis=prediction_axis  # Pass axis toggle here
+        taxa_mask_file, model_choice, target, n_neighbors,
+        brt_trees, rf_trees, 1, random_seed, axis=prediction_axis
     )
 
-with tabs[1]:
+elif tab_selection == "Data Exploration":
     data_exploration.show_tab(
-        train_climate_file, train_pollen_file, test_pollen_file, coords_file, 
-        axis=prediction_axis  # Pass axis toggle here
+        train_climate_file, train_pollen_file, test_pollen_file, coords_file,
+        axis=prediction_axis
     )
 
-with tabs[2]:
+elif tab_selection == "Validation":
     validation.show_tab(
         train_climate_file, train_pollen_file, test_pollen_file,
-        taxa_mask_file, model_choice, target, n_neighbors, brt_trees, rf_trees,
-        cv_folds, random_seed
+        taxa_mask_file, model_choice, target, n_neighbors,
+        brt_trees, rf_trees, cv_folds, random_seed
     )
