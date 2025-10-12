@@ -178,7 +178,7 @@ def show_tab(
     # --- Build Altair chart with optional mirrored X ---
     x_scale = alt.Scale(zero=False, reverse=mirror_x)
     
-    df_melted["Type"] = df_melted["Model"].apply(lambda x: "smoothed" if "_smoothed" in x else "per sample")
+    df_melted["Type"] = df_melted["Model"].apply(lambda x: "Smoothed" if "_smoothed" in x else "Per Sample")
 
     # Optionally, keep original Model for hover info
     chart = (

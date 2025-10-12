@@ -42,7 +42,7 @@ except Exception as e:
 # --- Shared Inputs (in Sidebar) ---
 st.sidebar.header("Model Configuration")
 
-model_choice = st.sidebar.selectbox("Choose model", ["MAT", "WAPLS", "BRT", "RF", "All"])
+model_choice = st.sidebar.selectbox("Choose model", ["MAT", "BRT", "RF", "All"])
 target = st.sidebar.selectbox(
     "Target climate variable",
     ["TANN","Temp_season","MTWA","MTCO","PANN","Temp_wet","Temp_dry","P_wet","P_dry","P_season"]
