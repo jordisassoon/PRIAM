@@ -182,8 +182,6 @@ def show_tab(
         lambda x: f"{x.replace('_smoothed', '')} (Smoothed)" if "_smoothed" in x else f"{x} (Per Sample)"
     )
 
-    st.dataframe(df_melted)  # 👈 Interactive table
-
     # Optionally, keep original Model for hover info
     chart = (
         alt.Chart(df_melted)
