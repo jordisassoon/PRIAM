@@ -64,7 +64,7 @@ def show_tab(
     )
 
     X_train, y_train, obs_names = loader.load_training_data(target)
-    X_test, ages = loader.load_test_data()
+    X_test, ages_or_depths = loader.load_test_data(age_or_depth=axis)
     X_train_aligned, X_test_aligned, shared_cols = loader.align_taxa(X_train, X_test)
 
     # --- Taxa selection expander ---
@@ -148,9 +148,9 @@ def show_tab(
             rf_model = model
 
     # --- Combine Predictions ---
-    df_preds = pd.DataFrame({f"{axis}": ages.values})
+    df_preds = pd.DataFrame({f"{axis}": ages_or_depths.values})
     for name, preds in predictions_dict.items():
-        df_preds[f"{name}_{target}"] = preds
+        df_preds[f"{name}"] = preds
     df_plot = df_preds.set_index(f"{axis}")
 
     # --- Gaussian Smoothing ---
@@ -173,12 +173,16 @@ def show_tab(
     )
 
     # --- Toggle for mirroring X axis ---
-    mirror_x = st.checkbox("Mirror Age axis (decreasing)", value=False)
+    mirror_x = st.checkbox(f"Mirror {axis} axis", value=False)
 
     # --- Build Altair chart with optional mirrored X ---
     x_scale = alt.Scale(zero=False, reverse=mirror_x)
     
-    df_melted["Type"] = df_melted["Model"].apply(lambda x: "Smoothed" if "_smoothed" in x else "Per Sample")
+    df_melted["Type"] = df_melted["Model"].apply(
+        lambda x: f"{x.replace('_smoothed', '')} (Smoothed)" if "_smoothed" in x else f"{x} (Per Sample)"
+    )
+
+    st.dataframe(df_melted)  # 👈 Interactive table
 
     # Optionally, keep original Model for hover info
     chart = (
@@ -233,11 +237,11 @@ def show_tab(
 
         # Prepare fossil dataframe with formatted labels
         if axis == "Age":
-            fossil_labels = ages.apply(lambda x: f"Age: {x}").astype(str)
+            fossil_labels = ages_or_depths.apply(lambda x: f"Age: {x}").astype(str)
         elif axis == "Depth":
-            fossil_labels = ages.apply(lambda x: f"Depth: {x}").astype(str)
+            fossil_labels = ages_or_depths.apply(lambda x: f"Depth: {x}").astype(str)
         else:
-            fossil_labels = [f"Fossil_{i}" for i in range(len(ages))]
+            fossil_labels = [f"Fossil_{i}" for i in range(len(ages_or_depths))]
 
         # Prepare fossil dataframe
         fossil_df = pd.DataFrame(
@@ -246,7 +250,7 @@ def show_tab(
                 "TSNE1": fossil_coords[:, 0],
                 "TSNE2": fossil_coords[:, 1],
                 "Type": "Fossil",
-                "Age": ages.values,
+                f"{axis}": ages_or_depths.values,
                 f"Predicted_{target}": predictions_dict["MAT"],
             }
         )

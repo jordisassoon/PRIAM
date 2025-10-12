@@ -3,7 +3,7 @@ from tabs import predictions, data_exploration, validation
 from streamlit_theme import st_theme
 
 st.set_page_config(page_title="PRISM Online",
-    page_icon="🚀", layout="wide", initial_sidebar_state="expanded")
+    page_icon="assets/PRISM_app_icon.svg", layout="wide", initial_sidebar_state="expanded")
 
 # Remove top padding
 st.markdown("""
