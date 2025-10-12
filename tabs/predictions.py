@@ -148,10 +148,10 @@ def show_tab(
             rf_model = model
 
     # --- Combine Predictions ---
-    df_preds = pd.DataFrame({"Age": ages.values})
+    df_preds = pd.DataFrame({f"{axis}": ages.values})
     for name, preds in predictions_dict.items():
         df_preds[f"{name}_{target}"] = preds
-    df_plot = df_preds.set_index("Age")
+    df_plot = df_preds.set_index(f"{axis}")
 
     # --- Gaussian Smoothing ---
     smoothing_sigma = st.slider("Gaussian smoothing (σ)", 0.0, 10.0, 2.0, 0.1)
@@ -166,7 +166,7 @@ def show_tab(
 
     # --- Altair Line Chart ---
     df_melted = df_plot_combined.melt(
-        id_vars="Age", var_name="Model", value_name="Prediction"
+        id_vars=f"{axis}", var_name="Model", value_name="Prediction"
     )
     df_melted["Thickness"] = df_melted["Model"].apply(
         lambda x: 4 if "_smoothed" in x else 1
@@ -185,7 +185,7 @@ def show_tab(
         alt.Chart(df_melted)
         .mark_line()
         .encode(
-            x=alt.X("Age", scale=alt.Scale(zero=False, reverse=mirror_x)),
+            x=alt.X(f"{axis}", scale=alt.Scale(zero=False, reverse=mirror_x)),
             y=alt.Y("Prediction", scale=alt.Scale(zero=False)),
             color=alt.Color("Type", title=""),  # This will show only "per sample" / "smoothed"
             strokeWidth=alt.StrokeWidth("Thickness", legend=None),
@@ -231,10 +231,18 @@ def show_tab(
         modern_df["TSNE1"] = modern_coords[:, 0]
         modern_df["TSNE2"] = modern_coords[:, 1]
 
+        # Prepare fossil dataframe with formatted labels
+        if axis == "Age":
+            fossil_labels = ages.apply(lambda x: f"Age: {x}").astype(str)
+        elif axis == "Depth":
+            fossil_labels = ages.apply(lambda x: f"Depth: {x}").astype(str)
+        else:
+            fossil_labels = [f"Fossil_{i}" for i in range(len(ages))]
+
         # Prepare fossil dataframe
         fossil_df = pd.DataFrame(
             {
-                "OBSNAME": [f"Fossil_{i}" for i in range(len(fossil_coords))],
+                "OBSNAME": fossil_labels,
                 "TSNE1": fossil_coords[:, 0],
                 "TSNE2": fossil_coords[:, 1],
                 "Type": "Fossil",
@@ -252,7 +260,7 @@ def show_tab(
         # Build links dataframe
         link_rows = []
         for i, info in enumerate(neighbor_info):
-            fossil_name = f"Fossil_{i}"
+            fossil_name = fossil_df.iloc[i]["OBSNAME"]
             f_tsne1, f_tsne2 = fossil_coords[i]
             for n in info["neighbors"]:
                 obsname = n["metadata"]["OBSNAME"]

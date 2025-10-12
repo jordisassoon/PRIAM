@@ -141,6 +141,9 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
 
     train_df = load_csv(train_proxy_file)
 
+    # Determine labels based on the flag
+    train_labels = train_df["OBSNAME"].astype(str)
+
     # === Taxa Preference Plot ===
     st.subheader("Taxa Preference per Climate Target")
     selected_target = st.selectbox("Select target climate variable", climate_options)
@@ -173,6 +176,15 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
         st.warning("To compare your train and test proxies, please upload the test proxy dataset.")
     else:
         test_df = load_csv(test_proxy_file)
+        
+        if axis == "Age":
+            test_labels = test_df["Age"].apply(lambda x: f"Age: {x}").astype(str)
+        elif axis == "Depth":
+            test_labels = test_df["Depth"].apply(lambda x: f"Depth: {x}").astype(str)
+        else:
+            test_labels = test_df.index.astype(str)
+        
+        labels = pd.concat([train_labels, test_labels], ignore_index=True)
 
         shared_cols = [c for c in train_df.columns if c in test_df.columns and c != "OBSNAME"]
         X_train = normalize_rows(train_df[shared_cols])
@@ -186,38 +198,42 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
         st.metric("Mean likelihood (PCA-KDE)", f"{np.mean(probs_norm):.3f}")
 
         kde_df = pd.DataFrame({"Test Sample": np.arange(len(probs_norm)), "Probability": probs_norm})
-        fig = px.bar(kde_df, x="Test Sample", y="Probability", title="Test Sample Likelihood (PCA-KDE)")
+        kde_df["Sample"] = test_labels
+        fig = px.bar(kde_df, x="Test Sample", y="Probability", hover_name="Sample", title="Test Sample Likelihood (PCA-KDE)")
         fig.update_layout(yaxis_title="Normalized Probability", xaxis_title="Test Sample Index")
         st.plotly_chart(fig, use_container_width=True)
 
         # --- Embeddings ---
         st.subheader("Low-Dimensional Embeddings (Train vs Test)")
-        pca_emb, tsne_emb, umap_emb, labels = compute_embeddings(X_train, X_test)
+        pca_emb, tsne_emb, umap_emb, set_labels = compute_embeddings(X_train, X_test)
 
         # PCA Plot
         pca_df = pd.DataFrame(pca_emb, columns=["PC1", "PC2"])
-        pca_df["Set"] = labels
+        pca_df["Sample"] = labels
+        pca_df["Set"] = set_labels
         fig_pca = px.scatter(
-            pca_df, x="PC1", y="PC2", color="Set", title="PCA Projection",
-            color_discrete_map={"Train": "#17becf", "Test": "red"}
+            pca_df, x="PC1", y="PC2", color="Set", hover_name="Sample", title="PCA Projection",
+            color_discrete_map={"Train": "steelblue", "Test": "red"}
         )
         st.plotly_chart(fig_pca, use_container_width=True)
 
         # t-SNE Plot
         tsne_df = pd.DataFrame(tsne_emb, columns=["Dim1", "Dim2"])
-        tsne_df["Set"] = labels
+        tsne_df["Sample"] = labels
+        tsne_df["Set"] = set_labels
         fig_tsne = px.scatter(
-            tsne_df, x="Dim1", y="Dim2", color="Set", title="t-SNE Projection",
-            color_discrete_map={"Train": "#17becf", "Test": "red"}
+            tsne_df, x="Dim1", y="Dim2", color="Set", hover_name="Sample", title="t-SNE Projection",
+            color_discrete_map={"Train": "steelblue", "Test": "red"}
         )
         st.plotly_chart(fig_tsne, use_container_width=True)
 
         # UMAP Plot
         umap_df = pd.DataFrame(umap_emb, columns=["UMAP1", "UMAP2"])
-        umap_df["Set"] = labels
+        umap_df["Sample"] = labels
+        umap_df["Set"] = set_labels
         fig_umap = px.scatter(
-            umap_df, x="UMAP1", y="UMAP2", color="Set", title="UMAP Projection",
-            color_discrete_map={"Train": "#17becf", "Test": "red"}
+            umap_df, x="UMAP1", y="UMAP2", color="Set", hover_name="Sample", title="UMAP Projection",
+            color_discrete_map={"Train": "steelblue", "Test": "red"}
         )
         st.plotly_chart(fig_umap, use_container_width=True)
 
