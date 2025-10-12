@@ -5,7 +5,7 @@ from sklearn.model_selection import GroupKFold
 
 from utils.csv_loader import read_csv_auto_delimiter
 
-class PollenDataLoader:
+class ProxyDataLoader:
     def __init__(self, climate_file: str, pollen_file: str, test_file: str, mask_file: str = None):
         self.climate_file = climate_file
         self.pollen_file = pollen_file

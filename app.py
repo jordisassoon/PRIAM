@@ -62,8 +62,8 @@ prediction_axis = st.sidebar.radio(
 # --- File uploads ---
 st.sidebar.header("Upload Data")
 train_climate_file = st.sidebar.file_uploader("Training Climate CSV", type=["csv"])
-train_pollen_file = st.sidebar.file_uploader("Training Pollen CSV", type=["csv"])
-test_pollen_file = st.sidebar.file_uploader("Test Fossil Pollen CSV", type=["csv"])
+train_proxy_file = st.sidebar.file_uploader("Training Proxy CSV", type=["csv"])
+test_proxy_file = st.sidebar.file_uploader("Test Fossil Proxy CSV", type=["csv"])
 taxa_mask_file = st.sidebar.file_uploader("Taxa mask CSV", type=["csv"])
 coords_file = st.sidebar.file_uploader("Coordinates file (CSV)", type=["csv"])
 
@@ -77,20 +77,20 @@ tab_selection = st.segmented_control(
 
 if tab_selection == "Predictions":
     predictions.show_tab(
-        train_climate_file, train_pollen_file, test_pollen_file,
+        train_climate_file, train_proxy_file, test_proxy_file,
         taxa_mask_file, model_choice, target, n_neighbors,
         brt_trees, rf_trees, 1, random_seed, axis=prediction_axis
     )
 
 elif tab_selection == "Data Exploration":
     data_exploration.show_tab(
-        train_climate_file, train_pollen_file, test_pollen_file, coords_file,
+        train_climate_file, train_proxy_file, test_proxy_file, coords_file,
         axis=prediction_axis
     )
 
 elif tab_selection == "Validation":
     validation.show_tab(
-        train_climate_file, train_pollen_file, test_pollen_file,
+        train_climate_file, train_proxy_file, test_proxy_file,
         taxa_mask_file, model_choice, target, n_neighbors,
         brt_trees, rf_trees, cv_folds, random_seed
     )

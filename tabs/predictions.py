@@ -14,14 +14,14 @@ from models.mat import MAT
 from models.brt import BRT
 from models.wa_pls import WAPLS
 from models.rf import RF
-from utils.dataloader import PollenDataLoader
+from utils.dataloader import ProxyDataLoader
 from validation.cross_validate import run_grouped_cv
 
 
 def show_tab(
     train_climate_file,
-    train_pollen_file,
-    test_pollen_file,
+    train_proxy_file,
+    test_proxy_file,
     taxa_mask_file,
     model_choice,
     target,
@@ -35,7 +35,7 @@ def show_tab(
 
     st.header("Predictions & Model Visualizations")
 
-    if not (train_climate_file and train_pollen_file and test_pollen_file):
+    if not (train_climate_file and train_proxy_file and test_proxy_file):
         st.warning("Please upload all required files to run predictions.")
         return
 
@@ -45,21 +45,21 @@ def show_tab(
         st.warning("Please upload the training climate dataset.")
         return
     try:
-        train_pollen_file.seek(0)
+        train_proxy_file.seek(0)
     except:
-        st.warning("Please upload the training pollen dataset.")
+        st.warning("Please upload the training proxy dataset.")
         return
     try:
-        test_pollen_file.seek(0)
+        test_proxy_file.seek(0)
     except:
-        st.warning("Please upload the test pollen dataset.")
+        st.warning("Please upload the test proxy dataset.")
         return
 
     # --- Load Data ---
-    loader = PollenDataLoader(
+    loader = ProxyDataLoader(
         climate_file=train_climate_file,
-        pollen_file=train_pollen_file,
-        test_file=test_pollen_file,
+        proxy_file=train_proxy_file,
+        test_file=test_proxy_file,
         mask_file=taxa_mask_file,
     )
 
