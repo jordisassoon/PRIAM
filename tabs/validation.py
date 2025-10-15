@@ -156,6 +156,7 @@ def show_tab(
 
     df_norm["R²"] = df_norm["R²"] + 1.0 / 2  # shift R² to [0, 1] for better visibility
     df_norm["KGE"] = (df_norm["KGE"] + 1.0) / 2  # shift KGE to [0, 1]
+    df_norm["Pearson R"] = (df_norm["Pearson R"] + 1.0) / 2  # shift R to [0, 1]
 
     fig = go.Figure()
     for model in df_norm.index:
@@ -180,7 +181,7 @@ def show_tab(
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    st.info("Note: R² and KGE values are shifted for visualization purposes.")
+    st.info("Note: R², KGE, and Pearson R values are shifted for visualization purposes.")
 
     # --- Prepare simple mean values per metric ---
     # Convert to DataFrame

@@ -1,6 +1,9 @@
 import streamlit as st
 from tabs import predictions, data_exploration, validation
 from streamlit_theme import st_theme
+from utils.csv_loader import read_csv_auto_delimiter
+import io
+import pandas as pd
 
 st.set_page_config(page_title="PRISM Online",
     page_icon="assets/PRISM_app_icon.svg", layout="wide", initial_sidebar_state="expanded")
@@ -41,12 +44,59 @@ except Exception as e:
 
 # --- Shared Inputs (in Sidebar) ---
 st.sidebar.header("Model Configuration")
-
 model_choice = st.sidebar.selectbox("Choose model", ["MAT", "BRT", "RF", "All"])
-target = st.sidebar.selectbox(
-    "Target climate variable",
-    ["TANN","Temp_season","MTWA","MTCO","PANN","Temp_wet","Temp_dry","P_wet","P_dry","P_season"]
-)
+
+# --- File uploads / Dummy Data Toggle ---
+st.sidebar.header("Use Dummy Data")
+use_dummy = st.sidebar.checkbox("Use Dummy Data")
+
+def load_dummy_file(path):
+    """Load a CSV from disk and return as a file-like object"""
+    df = read_csv_auto_delimiter(open(path, "r", encoding="latin1"))
+    buffer = io.BytesIO()
+    df.to_csv(buffer, index=False)
+    buffer.seek(0)  # reset pointer to start
+    return buffer
+
+if use_dummy:
+    try:
+        train_climate_file = load_dummy_file("./data/synthetic_climate_data.csv")
+        train_proxy_file = load_dummy_file("./data/synthetic_modern_data.csv")
+        test_proxy_file = load_dummy_file("./data/synthetic_test_data.csv")
+        taxa_mask_file = None  # or load a dummy mask if available
+        coords_file = load_dummy_file("./data/synthetic_coords_data.csv")
+        st.sidebar.success("Dummy data loaded from ./data")
+    except Exception as e:
+        st.sidebar.error(f"Failed to load dummy data: {e}")
+        train_climate_file = train_proxy_file = test_proxy_file = taxa_mask_file = coords_file = None
+else:
+    train_climate_file = train_proxy_file = test_proxy_file = taxa_mask_file = coords_file = None
+
+# --- Determine target variables dynamically ---
+def get_climate_columns(climate_file):
+    """Return list of column names from a climate CSV file-like object."""
+    if climate_file is None:
+        return []
+    try:
+        # reset pointer in case it's a BytesIO
+        if hasattr(climate_file, "seek"):
+            climate_file.seek(0)
+        df = read_csv_auto_delimiter(climate_file).drop(["OBSNAME"], axis=1, errors="ignore")
+        if hasattr(climate_file, "seek"):
+            climate_file.seek(0)
+        return df.columns.tolist()
+    except Exception as e:
+        st.sidebar.error(f"Failed to read climate file columns: {e}")
+        return []
+
+# Get target options
+target_options = get_climate_columns(train_climate_file)
+if not target_options:
+    target_options = ["None"]
+
+# --- Target selectbox ---
+target = st.sidebar.selectbox("Target climate variable", target_options, index=0)
+
 n_neighbors = st.sidebar.slider("MAT neighbors", 1, 20, 5)
 brt_trees = st.sidebar.slider("BRT trees", 1, 1000, 200)
 rf_trees = st.sidebar.slider("RF trees", 1, 1000, 200)
@@ -61,12 +111,13 @@ prediction_axis = st.sidebar.radio(
 )
 
 # --- File uploads ---
-st.sidebar.header("Upload Data")
-train_climate_file = st.sidebar.file_uploader("Training Climate CSV", type=["csv"])
-train_proxy_file = st.sidebar.file_uploader("Training Proxy CSV", type=["csv"])
-test_proxy_file = st.sidebar.file_uploader("Test Fossil Proxy CSV", type=["csv"])
-taxa_mask_file = st.sidebar.file_uploader("Taxa mask CSV", type=["csv"])
-coords_file = st.sidebar.file_uploader("Coordinates file (CSV)", type=["csv"])
+if not use_dummy:
+    st.sidebar.header("Upload Data Files")
+    train_climate_file = st.sidebar.file_uploader("Training Climate CSV", type=["csv"])
+    train_proxy_file = st.sidebar.file_uploader("Training Proxy CSV", type=["csv"])
+    test_proxy_file = st.sidebar.file_uploader("Test Fossil Proxy CSV", type=["csv"])
+    taxa_mask_file = st.sidebar.file_uploader("Taxa mask CSV", type=["csv"])
+    coords_file = st.sidebar.file_uploader("Coordinates file (CSV)", type=["csv"])
 
 tab_selection = st.segmented_control(
     "Select section:",  # still required, but hidden

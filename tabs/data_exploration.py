@@ -96,16 +96,13 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
     # === Climate Variables Scatter Plot ===
     st.subheader("Modern Climate Variables Scatter Plot")
 
-    climate_options = [
-        "TANN", "Temp_season", "MTWA", "MTCO", "PANN",
-        "Temp_wet", "Temp_dry", "P_wet", "P_dry", "P_season",
-    ]
+    climate_options = climate_df.drop(["OBSNAME"], axis=1, errors="ignore").columns.tolist()
     col1, col2 = st.columns(2)
     with col1:
-        x_var = st.selectbox("X-axis climate variable", climate_options, key="x_var_only")
+        x_var = st.selectbox("X-axis climate variable", climate_options, key="x_var_only", index=0)
     with col2:
         y_var = st.selectbox(
-            "Y-axis climate variable", [x for x in climate_options if x != x_var], key="y_var_only"
+            "Y-axis climate variable", climate_options, key="y_var_only", index=1
         )
 
     if x_var not in climate_df.columns or y_var not in climate_df.columns:
