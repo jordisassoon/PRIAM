@@ -153,7 +153,7 @@ def show_tab(
     metrics_df = pd.DataFrame(metrics_table).set_index("Model")
     df_norm = metrics_df[["Pearson R", "R²", "Spearman", "KGE"]].fillna(0.0)
     categories = list(df_norm.columns)
-    
+
     df_norm["R²"] = df_norm["R²"] + 1.0 / 2  # shift R² to [0, 1] for better visibility
     df_norm["KGE"] = (df_norm["KGE"] + 1.0) / 2  # shift KGE to [0, 1]
 
@@ -179,6 +179,8 @@ def show_tab(
         height=500,
     )
     st.plotly_chart(fig, use_container_width=True)
+
+    st.info("Note: R² and KGE values are shifted for visualization purposes.")
 
     # --- Prepare simple mean values per metric ---
     # Convert to DataFrame
