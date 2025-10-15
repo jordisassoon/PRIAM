@@ -149,10 +149,13 @@ def show_tab(
     st.table(full_df.round(3))
 
     # --- Radar plot ---
-    st.subheader("🕸️ Radar Plot of Model Performance (interactive)")
+    st.subheader("Radar Plot of Model Performance")
     metrics_df = pd.DataFrame(metrics_table).set_index("Model")
     df_norm = metrics_df[["Pearson R", "R²", "Spearman", "KGE"]].fillna(0.0)
     categories = list(df_norm.columns)
+    
+    df_norm["R²"] = df_norm["R²"] + 1.0 / 2  # shift R² to [0, 1] for better visibility
+    df_norm["KGE"] = (df_norm["KGE"] + 1.0) / 2  # shift KGE to [0, 1]
 
     fig = go.Figure()
     for model in df_norm.index:
