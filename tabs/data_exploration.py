@@ -62,7 +62,7 @@ def compute_embeddings(X_train, X_test):
     pca_emb = pca.fit_transform(combined)
 
     # t-SNE
-    tsne = TSNE(n_components=2, random_state=42, perplexity=30)
+    tsne = TSNE(n_components=2, random_state=42, learning_rate=200, perplexity=30)
     tsne_emb = tsne.fit_transform(combined)
 
     # UMAP

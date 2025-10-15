@@ -216,7 +216,7 @@ def show_tab(
         # Fit t-SNE on combined taxa data
         combined_matrix = np.vstack([X_train_aligned.values, X_test_aligned.values])
         tsne = TSNE(
-            n_components=2, perplexity=30, learning_rate=200, random_state=random_seed
+            n_components=2, perplexity=30, learning_rate=200, random_state=42
         )
         coords = tsne.fit_transform(combined_matrix)
 
