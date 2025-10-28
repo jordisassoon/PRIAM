@@ -1,6 +1,6 @@
-# 🌿 PRISM: A tool for Palaeoclimatic Reconstruction through Interactive Statistical Modelling 
+# 🌿 PRIAM: A tool for Palaeoclimatic Reconstruction through Interactive Statistical Modelling 
 
-PRISM is an interactive tool for proxy-based climate reconstruction and analysis. It allows users to import palaeoecological proxy data—such as fossil pollen, sediments, or other biological indicators—and apply multiple statistical and machine learning methods to reconstruct past climate conditions. The app provides instant model training, validation, and visualization, offering insights into model performance, feature importance, and uncertainty. Users can explore reconstructed climate variables through dynamic plots, comparative analyses, and summary statistics, making it a comprehensive platform for both research and teaching in palaeoclimatology.
+PRIAM is an interactive tool for proxy-based climate reconstruction and analysis. It allows users to import palaeoecological proxy data—such as fossil pollen, sediments, or other biological indicators—and apply multiple statistical and machine learning methods to reconstruct past climate conditions. The app provides instant model training, validation, and visualization, offering insights into model performance, feature importance, and uncertainty. Users can explore reconstructed climate variables through dynamic plots, comparative analyses, and summary statistics, making it a comprehensive platform for both research and teaching in palaeoclimatology.
 
 This project implements multiple methods for quantitative palaeoclimate reconstruction from fossil pollen data, including:
 
@@ -106,14 +106,14 @@ Features:
 
 Dael Sassoon
  — Palaeoecologist and Marie Curie Research Fellow (GEO3BCN-CSIC, Barcelona).
-Specialising in tropical palaeoecology and quantitative reconstruction of past climates. Developer of PRISM, integrating palaeoecological data with statistical and machine learning models for climate reconstruction.
+Specialising in tropical palaeoecology and quantitative reconstruction of past climates. Developer of PRIAM, integrating palaeoecological data with statistical and machine learning models for climate reconstruction.
 
 Jordan Sassoon
  — Computer Scientist. 
-Focused on applied AI, data systems, and scientific visualization. Lead developer of the PRISM interface, integrating backend modelling pipelines with an interactive analytical framework.
+Focused on applied AI, data systems, and scientific visualization. Lead developer of the PRIAM interface, integrating backend modelling pipelines with an interactive analytical framework.
 
 ## 🧠 Citation
 
-If you use PRISM in your research, please cite as:
+If you use PRIAM in your research, please cite as:
 
 Sassoon, D., & Sassoon, J. (2025). PRISM: A tool for Palaeoclimatic Reconstruction through Interactive Statistical Modelling. GitHub repository: https://github.com/jordisassoon/PyLaeo
