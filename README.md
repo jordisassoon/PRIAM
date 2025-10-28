@@ -116,4 +116,4 @@ Focused on applied AI, data systems, and scientific visualization. Lead develope
 
 If you use PRIAM in your research, please cite as:
 
-Sassoon, D., & Sassoon, J. (2025). PRISM: A tool for Palaeoclimatic Reconstruction through Interactive Statistical Modelling. GitHub repository: https://github.com/jordisassoon/PyLaeo
+Sassoon, D., & Sassoon, J. (2025). PRIAM: A tool for Palaeoclimatic Reconstruction through Interactive Analysis & Modelling. GitHub repository: https://github.com/jordisassoon/PRIAM
