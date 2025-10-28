@@ -37,7 +37,7 @@ try:
     if is_light_color(bg_color):
         st.sidebar.image("assets/PRIAM_full_logo_v3.svg", use_container_width=True)
     else:
-        st.sidebar.image("assets/PRIAM_full_logo_white_v3.svg", use_container_width=True)
+        st.sidebar.image("assets/PRIAM_full_logo_v3_white.svg", use_container_width=True)
 except Exception as e:
     print("Theme error:", e)
     st.sidebar.image("assets/PRIAM_full_logo_v3.svg", use_container_width=True)
