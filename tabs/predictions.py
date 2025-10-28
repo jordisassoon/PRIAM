@@ -10,6 +10,7 @@ from sklearn.tree import plot_tree
 import tempfile
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # Import your models and loader
 from models.mat import MAT
@@ -203,7 +204,6 @@ def show_tab(
 
     # --- Toggle for mirroring X axis ---
     mirror_x = st.checkbox(f"Mirror {axis} axis", value=False)
-    x_range = [df_plot_combined[axis_string].max(), df_plot_combined[axis_string].min()] if mirror_x else None
 
     # --- Layout ---
     fig.update_layout(
@@ -212,7 +212,9 @@ def show_tab(
         margin=dict(l=60, r=20, t=50, b=80),
         xaxis_title=axis_string,
         yaxis_title="Prediction",
-        xaxis=dict(autorange=x_range),
+        xaxis=dict(
+            autorange="reversed" if mirror_x else True  # ✅ Simpler
+        ),
         hovermode="x unified",
     )
 
