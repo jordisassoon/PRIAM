@@ -10,6 +10,7 @@ from validation.cross_validate import run_grouped_cv
 import plotly.graph_objects as go
 import plotly.express as px
 from sklearn.metrics import mean_absolute_error
+import io
 
 # Define a fixed color map for models
 color_map = {
@@ -145,8 +146,10 @@ def show_tab(
 
     # --- Display full metrics table ---
     st.subheader("Summary of Cross-validation Metrics")
-    full_df = pd.DataFrame(full_table)
-    st.table(full_df.round(3))
+    full_df = pd.DataFrame(full_table).round(3)
+
+    # --- Display table ---
+    st.dataframe(full_df)
 
     # --- Radar plot ---
     st.subheader("Radar Plot of Model Performance")
@@ -154,9 +157,9 @@ def show_tab(
     df_norm = metrics_df[["Pearson R", "R²", "Spearman", "KGE"]].fillna(0.0)
     categories = list(df_norm.columns)
 
-    df_norm["R²"] = df_norm["R²"] + 1.0 / 2  # shift R² to [0, 1] for better visibility
-    df_norm["KGE"] = (df_norm["KGE"] + 1.0) / 2  # shift KGE to [0, 1]
-    df_norm["Pearson R"] = (df_norm["Pearson R"] + 1.0) / 2  # shift R to [0, 1]
+    # df_norm["R²"] = df_norm["R²"] + 1.0 / 2  # shift R² to [0, 1] for better visibility
+    # df_norm["KGE"] = (df_norm["KGE"] + 1.0) / 2  # shift KGE to [0, 1]
+    # df_norm["Pearson R"] = (df_norm["Pearson R"] + 1.0) / 2  # shift R to [0, 1]
 
     fig = go.Figure()
     for model in df_norm.index:

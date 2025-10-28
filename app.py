@@ -46,6 +46,12 @@ except Exception as e:
 st.sidebar.header("Model Configuration")
 model_choice = st.sidebar.selectbox("Choose model", ["MAT", "BRT", "RF", "All"])
 
+# selectbox reads from state
+target = st.sidebar.selectbox(
+    "Target climate variable",
+    st.session_state.get("target_cols", ['TANN', 'PANN', 'MTWA', 'MTCO'])
+)
+
 n_neighbors = st.sidebar.slider("MAT neighbors", 1, 20, 5)
 brt_trees = st.sidebar.slider("BRT trees", 1, 1000, 200)
 rf_trees = st.sidebar.slider("RF trees", 1, 1000, 200)
@@ -59,9 +65,12 @@ prediction_axis = st.sidebar.radio(
     ["Age", "Depth"]
 )
 
-# --- File uploads / Dummy Data Toggle ---
-st.sidebar.header("Use Dummy Data")
-use_dummy = st.sidebar.checkbox("Use Dummy Data")
+st.sidebar.header("Upload Data Files")
+train_climate_file = st.sidebar.file_uploader("Training Climate CSV", type=["csv"])
+train_proxy_file = st.sidebar.file_uploader("Training Proxy CSV", type=["csv"])
+test_proxy_file = st.sidebar.file_uploader("Test Fossil Proxy CSV", type=["csv"])
+taxa_mask_file = st.sidebar.file_uploader("Taxa mask CSV", type=["csv"])
+coords_file = st.sidebar.file_uploader("Coordinates file (CSV)", type=["csv"])
 
 def load_dummy_file(path):
     """Load a CSV from disk and return as a file-like object"""
@@ -88,6 +97,10 @@ def get_climate_columns(climate_file):
         st.sidebar.error(f"Failed to read climate file columns: {e}")
         return []
 
+# --- File uploads / Dummy Data Toggle ---
+st.sidebar.header("Use Dummy Data")
+use_dummy = st.sidebar.checkbox("Use Dummy Data")
+
 if use_dummy:
     try:
         train_climate_file = load_dummy_file("./data/synthetic_climate_data.csv")
@@ -99,21 +112,12 @@ if use_dummy:
     except Exception as e:
         st.sidebar.error(f"Failed to load dummy data: {e}")
         train_climate_file = train_proxy_file = test_proxy_file = taxa_mask_file = coords_file = None
-else:
-    st.sidebar.header("Upload Data Files")
-    train_climate_file = st.sidebar.file_uploader("Training Climate CSV", type=["csv"])
-    train_proxy_file = st.sidebar.file_uploader("Training Proxy CSV", type=["csv"])
-    test_proxy_file = st.sidebar.file_uploader("Test Fossil Proxy CSV", type=["csv"])
-    taxa_mask_file = st.sidebar.file_uploader("Taxa mask CSV", type=["csv"])
-    coords_file = st.sidebar.file_uploader("Coordinates file (CSV)", type=["csv"])
 
-# Get target options
 target_options = get_climate_columns(train_climate_file)
-if not target_options:
-    target_options = ["None"]
 
-# --- Target selectbox ---
-target = st.sidebar.selectbox("Target climate variable", target_options, index=0)
+# only update state if file is present and has columns
+if train_climate_file is not None and target_options:
+    st.session_state["target_cols"] = target_options
 
 tab_selection = st.segmented_control(
     "Select section:",  # still required, but hidden

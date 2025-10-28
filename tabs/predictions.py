@@ -8,6 +8,8 @@ from utils.map_utils import generate_map
 from sklearn.manifold import TSNE
 from sklearn.tree import plot_tree
 import tempfile
+import plotly.express as px
+import plotly.graph_objects as go
 
 # Import your models and loader
 from models.mat import MAT
@@ -16,6 +18,7 @@ from models.wa_pls import WAPLS
 from models.rf import RF
 from utils.dataloader import ProxyDataLoader
 from validation.cross_validate import run_grouped_cv
+from utils.colors import color_map
 
 
 def show_tab(
@@ -147,11 +150,13 @@ def show_tab(
         if name == "RF":
             rf_model = model
 
+    axis_string = f"{axis}"
+
     # --- Combine Predictions ---
-    df_preds = pd.DataFrame({f"{axis}": ages_or_depths.values})
+    df_preds = pd.DataFrame({axis_string: ages_or_depths.values})
     for name, preds in predictions_dict.items():
         df_preds[f"{name}"] = preds
-    df_plot = df_preds.set_index(f"{axis}")
+    df_plot = df_preds.set_index(axis_string)
 
     # --- Gaussian Smoothing ---
     smoothing_sigma = st.slider("Gaussian smoothing (σ)", 0.0, 10.0, 2.0, 0.1)
@@ -164,39 +169,54 @@ def show_tab(
     else:
         df_plot_combined = df_plot.reset_index()
 
-    # --- Altair Line Chart ---
-    df_melted = df_plot_combined.melt(
-        id_vars=f"{axis}", var_name="Model", value_name="Prediction"
-    )
-    df_melted["Thickness"] = df_melted["Model"].apply(
-        lambda x: 4 if "_smoothed" in x else 1
-    )
+    # --- Prepare Plotly figure ---
+    fig = go.Figure()
+    
+    for col in df_plot_combined.columns:
+        if col == axis_string:
+            continue
+        
+        # Determine base model name for color
+        base_name = col.replace("_smoothed", "")
+        color = color_map.get(base_name, "#7f7f7f")  # default gray if not in map
+        
+        # Determine line style and name
+        if "_smoothed" in col:
+            line_width = 3
+            dash = "solid"
+            name = f"{base_name} (Smoothed)"
+        else:
+            line_width = 1
+            dash = "dot"
+            name = f"{base_name} (Per Sample)"
+        
+        fig.add_trace(
+            go.Scatter(
+                x=df_plot_combined[axis_string],
+                y=df_plot_combined[col],
+                mode="lines+markers",
+                name=name,
+                line=dict(color=color, width=line_width, dash=dash),
+                hovertemplate=f"%{{x}} {axis_string}<br>%{{y}} Prediction<br>Model: {name}<extra></extra>"
+            )
+        )
 
     # --- Toggle for mirroring X axis ---
     mirror_x = st.checkbox(f"Mirror {axis} axis", value=False)
+    x_range = [df_plot_combined[axis_string].max(), df_plot_combined[axis_string].min()] if mirror_x else None
 
-    # --- Build Altair chart with optional mirrored X ---
-    x_scale = alt.Scale(zero=False, reverse=mirror_x)
-    
-    df_melted["Type"] = df_melted["Model"].apply(
-        lambda x: f"{x.replace('_smoothed', '')} (Smoothed)" if "_smoothed" in x else f"{x} (Per Sample)"
+    # --- Layout ---
+    fig.update_layout(
+        width=900,
+        height=500,
+        margin=dict(l=60, r=20, t=50, b=80),
+        xaxis_title=axis_string,
+        yaxis_title="Prediction",
+        xaxis=dict(autorange=x_range),
+        hovermode="x unified",
     )
 
-    # Optionally, keep original Model for hover info
-    chart = (
-        alt.Chart(df_melted)
-        .mark_line()
-        .encode(
-            x=alt.X(f"{axis}", scale=alt.Scale(zero=False, reverse=mirror_x)),
-            y=alt.Y("Prediction", scale=alt.Scale(zero=False)),
-            color=alt.Color("Type", title=""),  # This will show only "per sample" / "smoothed"
-            strokeWidth=alt.StrokeWidth("Thickness", legend=None),
-            tooltip=["Model", "Prediction"]  # optional: show exact model on hover
-        )
-        .interactive()
-    )
-
-    st.altair_chart(chart, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
     # --- Show DataFrame in Streamlit ---
     st.subheader("Prediction Data Table")
@@ -248,7 +268,7 @@ def show_tab(
                 "TSNE1": fossil_coords[:, 0],
                 "TSNE2": fossil_coords[:, 1],
                 "Type": "Fossil",
-                f"{axis}": ages_or_depths.values,
+                axis_string: ages_or_depths.values,
                 f"Predicted_{target}": predictions_dict["MAT"],
             }
         )

@@ -1,5 +1,13 @@
 # tqdm_colors.py
 
+# Define a fixed color map for models
+color_map = {
+    "MAT": "#1f77b4",  # blue
+    "BRT": "#ff7f0e",  # orange
+    "RF": "#2ca02c",  # green
+}
+
+
 class TQDMColors:
     """
     Centralized color codes for tqdm progress bars.
