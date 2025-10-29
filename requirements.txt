@@ -9,4 +9,4 @@ scikit-learn
 tqdm
 umap-learn
 st-theme
-yaml
+PyYAML
