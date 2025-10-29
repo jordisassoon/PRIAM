@@ -3,6 +3,7 @@ from tabs import predictions, data_exploration, validation
 from streamlit_theme import st_theme
 from utils.csv_loader import read_csv_auto_delimiter
 import io
+import yaml
 import pandas as pd
 
 st.set_page_config(page_title="PRISM Online",
@@ -42,27 +43,60 @@ except Exception as e:
     print("Theme error:", e)
     st.sidebar.image("assets/PRIAM_full_logo_v3.svg", use_container_width=True)
 
-# --- Shared Inputs (in Sidebar) ---
-st.sidebar.header("Model Configuration")
-model_choice = st.sidebar.selectbox("Choose model", ["MAT", "BRT", "RF", "All"])
+# --- Initialize session state defaults ---
+defaults = {
+    "model_choice": "MAT",
+    "target": "TANN",
+    "n_neighbors": 5,
+    "brt_trees": 200,
+    "rf_trees": 200,
+    "cv_folds": 3,
+    "random_seed": 42,
+    "prediction_axis": "Age"
+}
+for key, val in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
 
-# selectbox reads from state
-target = st.sidebar.selectbox(
-    "Target climate variable",
-    st.session_state.get("target_cols", ['TANN', 'PANN', 'MTWA', 'MTCO'])
+# Track uploaded config file in session state
+if "uploaded_config_file" not in st.session_state:
+    st.session_state["uploaded_config_file"] = None
+
+# --- Sidebar: Load Config ---
+uploaded_config = st.sidebar.file_uploader("Load config", type=["yaml", "yml"])
+if uploaded_config and uploaded_config != st.session_state["uploaded_config_file"]:
+    try:
+        loaded_config = yaml.safe_load(uploaded_config)
+        for key in defaults.keys():
+            if key in loaded_config:
+                st.session_state[key] = loaded_config[key]
+        st.session_state["uploaded_config_file"] = uploaded_config
+        st.sidebar.success("Configuration loaded and applied!")
+    except Exception as e:
+        st.sidebar.error(f"Failed to load configuration: {e}")
+
+# --- Sidebar: Model Configuration ---
+st.sidebar.header("Model Configuration")
+model_choice = st.sidebar.selectbox(
+    "Choose model", ["MAT", "BRT", "RF", "All"], key="model_choice"
 )
 
-n_neighbors = st.sidebar.slider("MAT neighbors", 1, 20, 5)
-brt_trees = st.sidebar.slider("BRT trees", 1, 1000, 200)
-rf_trees = st.sidebar.slider("RF trees", 1, 1000, 200)
-cv_folds = st.sidebar.slider("CV folds", 1, 10, 3)
-random_seed = st.sidebar.number_input("Random seed", value=42)
+# Target depends on uploaded climate file
+target_options = st.session_state.get("target_cols", ['TANN', 'PANN', 'MTWA', 'MTCO'])
+target = st.sidebar.selectbox(
+    "Target climate variable", target_options, key="target"
+)
+
+n_neighbors = st.sidebar.slider("MAT neighbors", 1, 20, key="n_neighbors")
+brt_trees = st.sidebar.slider("BRT trees", 1, 1000, key="brt_trees")
+rf_trees = st.sidebar.slider("RF trees", 1, 1000, key="rf_trees")
+cv_folds = st.sidebar.slider("CV folds", 1, 10, key="cv_folds")
+random_seed = st.sidebar.number_input("Random seed", value=st.session_state["random_seed"], key="random_seed")
 
 # --- Toggle for Predictions Representation ---
 st.sidebar.header("Prediction Representation")
 prediction_axis = st.sidebar.radio(
-    "Show predictions by:",
-    ["Age", "Depth"]
+    "Show predictions by:", ["Age", "Depth"], key="prediction_axis"
 )
 
 st.sidebar.header("Upload Data Files")
@@ -119,13 +153,40 @@ target_options = get_climate_columns(train_climate_file)
 if train_climate_file is not None and target_options:
     st.session_state["target_cols"] = target_options
 
-tab_selection = st.segmented_control(
-    "Select section:",  # still required, but hidden
-    options=["Predictions", "Data Exploration", "Validation"],
-    default="Predictions",
-    selection_mode="single",
-    label_visibility="collapsed"  # 👈 hides the label from the UI
-)
+import yaml
+
+# --- Tab Selection ---
+tab_selection_col, save_col = st.columns([6, 1])
+
+with tab_selection_col:
+    tab_selection = st.segmented_control(
+        "Select section:",
+        options=["Predictions", "Data Exploration", "Validation"],
+        default="Predictions",
+        selection_mode="single",
+        label_visibility="collapsed"
+    )
+
+# --- Toolbar: Save / Load Config ---
+config = {
+    "model_choice": model_choice,
+    "target": target,
+    "n_neighbors": n_neighbors,
+    "brt_trees": brt_trees,
+    "rf_trees": rf_trees,
+    "cv_folds": cv_folds,
+    "random_seed": random_seed,
+    "prediction_axis": prediction_axis,
+}
+
+with save_col:
+    st.download_button(
+        label="Save Config",
+        data=yaml.dump(config),
+        file_name="priam_config.yaml",
+        mime="text/yaml",
+        use_container_width=True
+    )
 
 if tab_selection == "Predictions":
     predictions.show_tab(
