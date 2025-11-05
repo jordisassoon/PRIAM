@@ -21,6 +21,11 @@ from utils.dataloader import ProxyDataLoader
 from validation.cross_validate import run_grouped_cv
 from utils.colors import color_map
 
+@st.cache_data
+def hellinger_transform(df):
+    """Apply Hellinger transformation to the DataFrame."""
+    df = df + 1e-9  # Avoid division by zero
+    return df.apply(lambda x: np.sqrt(x) / np.sqrt(x.sum()), axis=1)
 
 def show_tab(
     train_climate_file,
@@ -149,7 +154,7 @@ def show_tab(
         if name == "MAT":
             mat_model = model
         if name == "RF":
-            rf_model = model
+            brt_model = model
 
     axis_string = f"{axis}"
 
@@ -237,6 +242,10 @@ def show_tab(
 
         # Fit t-SNE on combined taxa data
         combined_matrix = np.vstack([X_train_aligned.values, X_test_aligned.values])
+
+        # Hellinger transformation
+        combined_matrix = hellinger_transform(pd.DataFrame(combined_matrix)).values
+
         tsne = TSNE(
             n_components=2, perplexity=30, random_state=42
         )
@@ -383,7 +392,7 @@ def show_tab(
         )
 
 
-    # --- RF/BRT Tree Visualization ---
+    # --- RF Tree Visualization ---
     if model_choice in ["RF", "All"]:
         if model_choice == "All":
             rf_model = model
@@ -413,6 +422,51 @@ def show_tab(
                 y="Feature",
                 orientation="h",
                 title="Feature Importance (Mean Decrease in Impurity)",
+                color="Importance",
+                color_continuous_scale="viridis",
+                height=600,
+            )
+
+            fig.update_layout(
+                yaxis=dict(autorange="reversed"),  # highest importance on top
+                margin=dict(l=100, r=20, t=50, b=50),
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+
+    # --- BRT Tree Visualization ---
+    if model_choice in ["BRT", "All"]:
+        if model_choice == "All":
+            brt_model = model
+        else:
+            brt_model = model
+        
+        st.subheader(f"BRT Model Visualization")
+        
+        # --- Feature Importances ---
+        if hasattr(brt_model, "feature_importances_"):
+            st.markdown("### 🔍 Feature Importance")
+
+            # For LightGBM, you can choose 'split' or 'gain'
+            importances = brt_model.feature_importances_  # default is 'split', use brt_model.feature_importance(importance_type='gain') if needed
+
+            feature_names = list(X_train_aligned.columns)
+
+            # Create DataFrame
+            importance_df = (
+                pd.DataFrame({"Feature": feature_names, "Importance": importances})
+                .sort_values("Importance", ascending=False)
+                .reset_index(drop=True)
+            )
+
+            # --- Plotly Bar Chart ---
+            fig = px.bar(
+                importance_df,
+                x="Importance",
+                y="Feature",
+                orientation="h",
+                title="Feature Importance (LightGBM)",
                 color="Importance",
                 color_continuous_scale="viridis",
                 height=600,

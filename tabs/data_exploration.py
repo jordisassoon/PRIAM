@@ -19,6 +19,12 @@ from utils.map_utils import generate_map
 # ======================
 
 @st.cache_data
+def hellinger_transform(df):
+    """Apply Hellinger transformation to the DataFrame."""
+    df = df + 1e-9  # Avoid division by zero
+    return df.apply(lambda x: np.sqrt(x) / np.sqrt(x.sum()), axis=1)
+
+@st.cache_data
 def load_csv(file):
     """Read a CSV file safely with caching."""
     file.seek(0)
@@ -33,6 +39,11 @@ def normalize_rows(df):
 @st.cache_data
 def compute_mmd(X_train, X_test, gamma=1.0):
     """Compute Maximum Mean Discrepancy (MMD) between train/test."""
+
+    # Hellinger transformation
+    X_train = hellinger_transform(pd.DataFrame(X_train)).values
+    X_test = hellinger_transform(pd.DataFrame(X_test)).values
+
     XX = rbf_kernel(X_train, X_train, gamma)
     YY = rbf_kernel(X_test, X_test, gamma)
     XY = rbf_kernel(X_train, X_test, gamma)
@@ -41,6 +52,11 @@ def compute_mmd(X_train, X_test, gamma=1.0):
 @st.cache_data
 def compute_pca_kde(X_train, X_test, bandwidth=0.5):
     """Compute PCA + KDE density probabilities for test samples."""
+
+    # Apply Hellinger transformation
+    X_train = hellinger_transform(pd.DataFrame(X_train)).values
+    X_test = hellinger_transform(pd.DataFrame(X_test)).values
+
     pca = PCA(n_components=10, random_state=42)
     X_train_pca = pca.fit_transform(X_train)
     X_test_pca = pca.transform(X_test)
@@ -56,6 +72,9 @@ def compute_embeddings(X_train, X_test):
     """Compute PCA, t-SNE, and UMAP embeddings for visualization."""
     combined = np.vstack([X_train, X_test])
     labels = ["Train"] * len(X_train) + ["Test"] * len(X_test)
+
+    # Hellinger transformation
+    combined = hellinger_transform(pd.DataFrame(combined)).values
 
     # PCA
     pca = PCA(n_components=2)
