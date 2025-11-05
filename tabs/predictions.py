@@ -10,7 +10,6 @@ from sklearn.tree import plot_tree
 import tempfile
 import plotly.express as px
 import plotly.graph_objects as go
-import seaborn as sns
 from plotly.subplots import make_subplots
 
 # Import your models and loader
