@@ -214,3 +214,81 @@ def show_tab(
     fig.update_layout(yaxis_title="Error Metric Value", xaxis_title="Metric")
 
     st.plotly_chart(fig, use_container_width=True)
+
+    # --- Scree Plot Toggle ---
+    show_scree = st.toggle("Show Scree Plot for Model Sensitivity", value=False)
+
+    if show_scree:
+        st.info(
+            "This analysis shows how model performance changes with key hyperparameters "
+            "(neighbors for MAT, trees for BRT/RF)."
+        )
+
+        # Define parameter ranges for each model
+        param_ranges = {
+            "MAT": {"param_name": "n_neighbors", "values": [1, 2, 3, 4, 5, 6, 7]},
+            "RF": {"param_name": "n_estimators", "values": [50, 100, 200, 300, 500, 700, 1000]},
+            "BRT": {"param_name": "n_estimators", "values": [50, 100, 200, 300, 500, 700, 1000]},
+        }
+
+        for name, (model_class, base_params) in models_to_run.items():
+            if name not in param_ranges:
+                continue  # skip models without scree logic
+
+            st.markdown(f"### {name} Scree Plot")
+
+            param_name = param_ranges[name]["param_name"]
+            test_values = param_ranges[name]["values"]
+
+            scree_results = []
+
+            for val in test_values:
+                # Update model params for this run
+                params = base_params.copy()
+                params[param_name] = val
+
+                with st.spinner(f"Running {cv_folds}-fold CV with {param_name}={val}..."):
+                    scores = run_grouped_cv(
+                        model_class,
+                        params,
+                        X_train,
+                        y_train,
+                        obs_names,
+                        n_splits=cv_folds,
+                        seed=random_seed,
+                        loader=loader,
+                    )
+
+                scree_results.append(
+                    {
+                        param_name: val,
+                        "R²": np.mean(scores["r2"]),
+                        "RMSE": np.mean(scores["rmse"]),
+                        "MAE": np.mean(scores["mae"]),
+                    }
+                )
+
+            scree_df = pd.DataFrame(scree_results)
+
+            # --- Plot Scree Plot (R² vs parameter) ---
+            fig = go.Figure()
+
+            for metric in ["R²", "RMSE", "MAE"]:
+                fig.add_trace(
+                    go.Scatter(
+                        x=scree_df[param_name],
+                        y=scree_df[metric],
+                        mode="lines+markers",
+                        name=metric,
+                    )
+                )
+
+            fig.update_layout(
+                title=f"Scree Plot for {name} ({param_name})",
+                xaxis_title=param_name,
+                yaxis_title="Metric Value",
+                legend_title="Metric",
+                height=500,
+            )
+
+            st.plotly_chart(fig, use_container_width=True)

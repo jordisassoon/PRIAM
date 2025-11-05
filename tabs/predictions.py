@@ -10,6 +10,7 @@ from sklearn.tree import plot_tree
 import tempfile
 import plotly.express as px
 import plotly.graph_objects as go
+import seaborn as sns
 from plotly.subplots import make_subplots
 
 # Import your models and loader
@@ -389,36 +390,38 @@ def show_tab(
             rf_model = model
         else:
             rf_model = model
-        st.subheader(f"RF Tree Visualization")
-        if hasattr(rf_model, "estimators_"):
-            num_trees = len(rf_model.estimators_)
-            tree_idx = st.slider(f"Select tree index for RF", 0, num_trees - 1, 0)
-            tree_to_plot = rf_model.estimators_[tree_idx]
+        
+        st.subheader(f"RF Model Visualization")
+        
+        # --- Feature Importances ---
+        if hasattr(rf_model, "feature_importances_"):
+            st.markdown("### 🔍 Feature Importance")
 
-            viz_choice = st.radio(
-                "Visualization type", ["Simple (matplotlib)", "Detailed (dtreeviz)"]
+            importances = rf_model.feature_importances_
+            feature_names = list(X_train_aligned.columns)
+
+            # Create DataFrame
+            importance_df = (
+                pd.DataFrame({"Feature": feature_names, "Importance": importances})
+                .sort_values("Importance", ascending=False)
+                .reset_index(drop=True)
             )
-            if viz_choice == "Simple (matplotlib)":
-                fig, ax = plt.subplots(figsize=(20, 10))
-                plot_tree(tree_to_plot, filled=True, max_depth=3, fontsize=8)
-                st.pyplot(fig)
-            elif viz_choice == "Detailed (dtreeviz)":
-                try:
-                    from dtreeviz.trees import dtreeviz
 
-                    viz_model = dtreeviz(
-                        tree_to_plot,
-                        X_train_aligned,
-                        y_train,
-                        target_name=target,
-                        feature_names=list(X_train_aligned.columns),
-                    )
-                    with tempfile.NamedTemporaryFile(
-                        suffix=".svg", delete=False
-                    ) as tmp:
-                        tmp_path = tmp.name
-                        viz_model.save(tmp_path)
-                    with open(tmp_path, "r", encoding="utf-8") as f:
-                        st.components.v1.html(f.read(), height=700, scrolling=True)
-                except Exception as e:
-                    st.error(f"dtreeviz failed: {e}")
+            # --- Plotly Bar Chart ---
+            fig = px.bar(
+                importance_df,
+                x="Importance",
+                y="Feature",
+                orientation="h",
+                title="Feature Importance (Mean Decrease in Impurity)",
+                color="Importance",
+                color_continuous_scale="viridis",
+                height=600,
+            )
+
+            fig.update_layout(
+                yaxis=dict(autorange="reversed"),  # highest importance on top
+                margin=dict(l=100, r=20, t=50, b=50),
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
