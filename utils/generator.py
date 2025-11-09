@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 # Ensure data folder exists
-os.makedirs('./data', exist_ok=True)
+os.makedirs("./data", exist_ok=True)
 
 # Parameters
 n_modern = 1000
@@ -23,16 +23,16 @@ query_raw = np.random.rand(n_query, n_taxa)
 query_data = query_raw / query_raw.sum(axis=1, keepdims=True) * 100
 
 # Taxon names
-taxa_names = [f'Taxon_{i+1}' for i in range(n_taxa)]
+taxa_names = [f"Taxon_{i+1}" for i in range(n_taxa)]
 
 # Build DataFrames
 modern_df = pd.DataFrame(modern_data, columns=taxa_names)
-modern_df['temperature'] = y_modern  # add temperature column
+modern_df["temperature"] = y_modern  # add temperature column
 query_df = pd.DataFrame(query_data, columns=taxa_names)
 
 # Save to CSV
-modern_csv_path = './data/modern_taxa.csv'
-query_csv_path = './data/query_taxa.csv'
+modern_csv_path = "./data/modern_taxa.csv"
+query_csv_path = "./data/query_taxa.csv"
 modern_df.to_csv(modern_csv_path, index=False)
 query_df.to_csv(query_csv_path, index=False)
 

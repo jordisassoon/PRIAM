@@ -3,6 +3,7 @@ import folium
 import click
 import branca.colormap as cm
 
+
 @click.command()
 @click.argument("pollen_file", type=click.Path(exists=True))
 @click.argument("coords_file", type=click.Path(exists=True))
@@ -10,13 +11,17 @@ import branca.colormap as cm
 @click.option("--lat-col", default="LATI", help="Column name for latitude")
 @click.option("--lon-col", default="LONG", help="Column name for longitude")
 @click.option("--alt-col", default="ALTI", help="Column name for altitude")
-@click.option("--output-html", default="map.html", help="Output HTML file for interactive map")
-def main(pollen_file, coords_file, sample_id_col, lat_col, lon_col, alt_col, output_html):
+@click.option(
+    "--output-html", default="map.html", help="Output HTML file for interactive map"
+)
+def main(
+    pollen_file, coords_file, sample_id_col, lat_col, lon_col, alt_col, output_html
+):
     """Load pollen and coordinate CSVs, merge them, and plot locations on an interactive map with altitude color scale."""
 
     # ==== LOAD DATA ====
-    pollen_df = pd.read_csv(pollen_file, delimiter=',', encoding="latin1")
-    coords_df = pd.read_csv(coords_file, delimiter=',', encoding="latin1")
+    pollen_df = pd.read_csv(pollen_file, delimiter=",", encoding="latin1")
+    coords_df = pd.read_csv(coords_file, delimiter=",", encoding="latin1")
 
     # pollen_df = pollen_df.rename(columns={"ï»¿OBSNAME": "OBSNAME"})
 
@@ -43,7 +48,7 @@ def main(pollen_file, coords_file, sample_id_col, lat_col, lon_col, alt_col, out
         colormap.add_to(m)
     else:
         colormap = lambda x: "blue"
-    
+
     print(merged_df[merged_df["OBSNAME"] == "PATAM18_CT2"])
 
     # ==== ADD POINTS ====
@@ -58,7 +63,7 @@ def main(pollen_file, coords_file, sample_id_col, lat_col, lon_col, alt_col, out
             fill=True,
             fill_color=color,
             fill_opacity=0.7,
-            popup=popup_text
+            popup=popup_text,
         ).add_to(m)
 
     # ==== SAVE MAP ====

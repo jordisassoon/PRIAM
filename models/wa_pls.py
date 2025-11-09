@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class WAPLS:
     def __init__(self, n_components=2, weighted=False, standardize=True, lean=False):
         self.n_components = n_components
@@ -46,11 +47,11 @@ class WAPLS:
         # Initial gradient
         if not self.weighted:
             g = X.T @ Yc / C
-            gamma0 = np.sum(g ** 2)
+            gamma0 = np.sum(g**2)
         else:
             Wc = C / C.sum()
             g = X.T @ Yc / C
-            gamma0 = np.sum(g ** 2 * Wc)
+            gamma0 = np.sum(g**2 * Wc)
 
         d = g.copy()
         b = np.zeros((nc, 1))
@@ -61,14 +62,14 @@ class WAPLS:
                 t = X @ (d / C)
                 if T_list:
                     Tmat = np.column_stack(T_list)
-                    t -= Tmat @ (Tmat.T @ t / np.sum(Tmat ** 2, axis=0))
+                    t -= Tmat @ (Tmat.T @ t / np.sum(Tmat**2, axis=0))
                 meant = t.mean()
                 t -= meant
-                tau = np.sum(t ** 2)
+                tau = np.sum(t**2)
             else:
                 t = (X @ d) / R
                 Wr = R / R.sum()
-                tau = np.sum((t ** 2) * Wr)
+                tau = np.sum((t**2) * Wr)
 
             if tau > 1e-12:
                 alpha = gamma0 / tau
@@ -78,10 +79,10 @@ class WAPLS:
                 # Update gradient
                 if not self.weighted:
                     g = X.T @ Yc / C
-                    gamma = np.sum(g ** 2)
+                    gamma = np.sum(g**2)
                 else:
                     g = X.T @ Yc / C
-                    gamma = np.sum(g ** 2 * Wc)
+                    gamma = np.sum(g**2 * Wc)
 
                 d = g + (gamma / gamma0) * d
                 gamma0 = gamma

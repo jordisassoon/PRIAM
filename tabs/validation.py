@@ -184,7 +184,9 @@ def show_tab(
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    st.info("Note: R², KGE, and Pearson R values are shifted for visualization purposes.")
+    st.info(
+        "Note: R², KGE, and Pearson R values are shifted for visualization purposes."
+    )
 
     # --- Prepare simple mean values per metric ---
     # Convert to DataFrame
@@ -227,8 +229,14 @@ def show_tab(
         # Define parameter ranges for each model
         param_ranges = {
             "MAT": {"param_name": "n_neighbors", "values": [1, 2, 3, 4, 5, 6, 7]},
-            "RF": {"param_name": "n_estimators", "values": [1, 10, 50, 100, 200, 300, 500, 700, 1000]},
-            "BRT": {"param_name": "n_estimators", "values": [1, 10, 50, 100, 200, 300, 500, 700, 1000]},
+            "RF": {
+                "param_name": "n_estimators",
+                "values": [1, 10, 50, 100, 200, 300, 500, 700, 1000],
+            },
+            "BRT": {
+                "param_name": "n_estimators",
+                "values": [1, 10, 50, 100, 200, 300, 500, 700, 1000],
+            },
         }
 
         for name, (model_class, base_params) in models_to_run.items():
@@ -247,7 +255,9 @@ def show_tab(
                 params = base_params.copy()
                 params[param_name] = val
 
-                with st.spinner(f"Running {cv_folds}-fold CV with {param_name}={val}..."):
+                with st.spinner(
+                    f"Running {cv_folds}-fold CV with {param_name}={val}..."
+                ):
                     scores = run_grouped_cv(
                         model_class,
                         params,

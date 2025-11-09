@@ -18,11 +18,13 @@ from utils.map_utils import generate_map
 # 🔹 CACHING UTILITIES
 # ======================
 
+
 @st.cache_data
 def hellinger_transform(df):
     """Apply Hellinger transformation to the DataFrame."""
     df = df + 1e-9  # Avoid division by zero
     return df.apply(lambda x: np.sqrt(x) / np.sqrt(x.sum()), axis=1)
+
 
 @st.cache_data
 def load_csv(file):
@@ -30,11 +32,13 @@ def load_csv(file):
     file.seek(0)
     return pd.read_csv(file, encoding="latin1")
 
+
 @st.cache_data
 def normalize_rows(df):
     """Normalize rows to sum to 1."""
     row_sums = df.sum(axis=1)
     return df.div(row_sums.replace(0, np.nan), axis=0).fillna(0)
+
 
 @st.cache_data
 def compute_mmd(X_train, X_test, gamma=1.0):
@@ -49,6 +53,7 @@ def compute_mmd(X_train, X_test, gamma=1.0):
     XY = rbf_kernel(X_train, X_test, gamma)
     return np.mean(XX) + np.mean(YY) - 2 * np.mean(XY)
 
+
 @st.cache_data
 def compute_pca_kde(X_train, X_test, bandwidth=0.5):
     """Compute PCA + KDE density probabilities for test samples."""
@@ -57,7 +62,7 @@ def compute_pca_kde(X_train, X_test, bandwidth=0.5):
     X_train = hellinger_transform(pd.DataFrame(X_train)).values
     X_test = hellinger_transform(pd.DataFrame(X_test)).values
 
-    pca = PCA(n_components=10, random_state=42)
+    pca = PCA(n_components=X_test.shape[1] // 5, random_state=42)
     X_train_pca = pca.fit_transform(X_train)
     X_test_pca = pca.transform(X_test)
 
@@ -67,46 +72,49 @@ def compute_pca_kde(X_train, X_test, bandwidth=0.5):
     probs_norm = (probs - probs.min()) / (probs.max() - probs.min())
     return probs_norm
 
-@st.cache_resource
+
+@st.cache_data
 def compute_embeddings(X_train, X_test):
     """Compute PCA, t-SNE, and UMAP embeddings for visualization."""
     combined = np.vstack([X_train, X_test])
     labels = ["Train"] * len(X_train) + ["Test"] * len(X_test)
 
     # Hellinger transformation
-    combined = hellinger_transform(pd.DataFrame(combined)).values
+    h_combined = hellinger_transform(pd.DataFrame(combined)).values
 
     # PCA
     pca = PCA(n_components=2)
-    pca_emb = pca.fit_transform(combined)
+    pca_emb = pca.fit_transform(h_combined)
 
     # t-SNE
     tsne = TSNE(n_components=2, random_state=42, perplexity=30)
     tsne_emb = tsne.fit_transform(combined)
 
-    # UMAP
-    reducer = umap.UMAP(random_state=42)
-    umap_emb = reducer.fit_transform(combined)
+    return pca_emb, tsne_emb, labels
 
-    return pca_emb, tsne_emb, umap_emb, labels
 
-@st.cache_resource
+@st.cache_data
 def cached_generate_map(train_proxy_file, coords_file, topo):
     new_topo = topo
     """Cache the map generation process."""
     output_html = "map_output.html"
-    return generate_map(train_proxy_file, coords_file, output_html=output_html, topo=new_topo)
+    return generate_map(
+        train_proxy_file, coords_file, output_html=output_html, topo=new_topo
+    )
 
 
 # ======================
 # 🔹 MAIN APP FUNCTION
 # ======================
 
+
 def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file, axis):
     st.header("Data Exploration: Distribution & Train–Test Comparison")
 
     if not train_climate_file:
-        st.warning("To begin exploring data, please upload the training climate dataset.")
+        st.warning(
+            "To begin exploring data, please upload the training climate dataset."
+        )
         return
 
     # === Load climate data ===
@@ -115,10 +123,14 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
     # === Climate Variables Scatter Plot ===
     st.subheader("Modern Climate Variables Scatter Plot")
 
-    climate_options = climate_df.drop(["OBSNAME"], axis=1, errors="ignore").columns.tolist()
+    climate_options = climate_df.drop(
+        ["OBSNAME"], axis=1, errors="ignore"
+    ).columns.tolist()
     col1, col2 = st.columns(2)
     with col1:
-        x_var = st.selectbox("X-axis climate variable", climate_options, key="x_var_only", index=0)
+        x_var = st.selectbox(
+            "X-axis climate variable", climate_options, key="x_var_only", index=0
+        )
     with col2:
         y_var = st.selectbox(
             "Y-axis climate variable", climate_options, key="y_var_only", index=1
@@ -136,8 +148,12 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
             alt.Chart(obs_df)
             .mark_circle(size=60, opacity=0.7)
             .encode(
-                x=alt.X(f"{x_var}:Q", title=x_var, scale=alt.Scale(domain=(x_min, x_max))),
-                y=alt.Y(f"{y_var}:Q", title=y_var, scale=alt.Scale(domain=(y_min, y_max))),
+                x=alt.X(
+                    f"{x_var}:Q", title=x_var, scale=alt.Scale(domain=(x_min, x_max))
+                ),
+                y=alt.Y(
+                    f"{y_var}:Q", title=y_var, scale=alt.Scale(domain=(y_min, y_max))
+                ),
                 tooltip=[
                     alt.Tooltip("Type:N"),
                     alt.Tooltip("OBSNAME:N"),
@@ -152,7 +168,9 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
 
     # === Training Proxy File ===
     if not train_proxy_file:
-        st.warning("To plot taxa distributions and compare train–test distributions, please upload the training proxy dataset.")
+        st.warning(
+            "To plot taxa distributions and compare train–test distributions, please upload the training proxy dataset."
+        )
         return
 
     train_df = load_csv(train_proxy_file)
@@ -174,7 +192,9 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
     total_count = merged_df.groupby("binned_target")[selected_taxa].count()
     preference = (taxa_sum / total_count).reset_index()
     preference.rename(columns={selected_taxa: "preference"}, inplace=True)
-    preference["bin_label"] = preference["binned_target"].apply(lambda x: f"{x.left:.2f}–{x.right:.2f}")
+    preference["bin_label"] = preference["binned_target"].apply(
+        lambda x: f"{x.left:.2f}–{x.right:.2f}"
+    )
 
     chart = (
         alt.Chart(preference)
@@ -189,20 +209,24 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
 
     # === Train vs Test Distribution Comparison ===
     if not test_proxy_file:
-        st.warning("To compare your train and test proxies, please upload the test proxy dataset.")
+        st.warning(
+            "To compare your train and test proxies, please upload the test proxy dataset."
+        )
     else:
         test_df = load_csv(test_proxy_file)
-        
+
         if axis == "Age":
             test_labels = test_df["Age"].apply(lambda x: f"Age: {x}").astype(str)
         elif axis == "Depth":
             test_labels = test_df["Depth"].apply(lambda x: f"Depth: {x}").astype(str)
         else:
             test_labels = test_df.index.astype(str)
-        
+
         labels = pd.concat([train_labels, test_labels], ignore_index=True)
 
-        shared_cols = [c for c in train_df.columns if c in test_df.columns and c != "OBSNAME"]
+        shared_cols = [
+            c for c in train_df.columns if c in test_df.columns and c != "OBSNAME"
+        ]
         X_train = normalize_rows(train_df[shared_cols])
         X_test = normalize_rows(test_df[shared_cols])
 
@@ -213,23 +237,38 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
         probs_norm = compute_pca_kde(X_train, X_test)
         st.metric("Mean likelihood (PCA-KDE)", f"{np.mean(probs_norm):.3f}")
 
-        kde_df = pd.DataFrame({"Test Sample": np.arange(len(probs_norm)), "Probability": probs_norm})
+        kde_df = pd.DataFrame(
+            {"Test Sample": np.arange(len(probs_norm)), "Probability": probs_norm}
+        )
         kde_df["Sample"] = test_labels
-        fig = px.bar(kde_df, x="Test Sample", y="Probability", hover_name="Sample", title="Test Sample Likelihood (PCA-KDE)")
-        fig.update_layout(yaxis_title="Normalized Probability", xaxis_title="Test Sample Index")
+        fig = px.bar(
+            kde_df,
+            x="Test Sample",
+            y="Probability",
+            hover_name="Sample",
+            title="Test Sample Likelihood (PCA-KDE)",
+        )
+        fig.update_layout(
+            yaxis_title="Normalized Probability", xaxis_title="Test Sample Index"
+        )
         st.plotly_chart(fig, use_container_width=True)
 
         # --- Embeddings ---
         st.subheader("Low-Dimensional Embeddings (Train vs Test)")
-        pca_emb, tsne_emb, umap_emb, set_labels = compute_embeddings(X_train, X_test)
+        pca_emb, tsne_emb, set_labels = compute_embeddings(X_train, X_test)
 
         # PCA Plot
         pca_df = pd.DataFrame(pca_emb, columns=["PC1", "PC2"])
         pca_df["Sample"] = labels
         pca_df["Set"] = set_labels
         fig_pca = px.scatter(
-            pca_df, x="PC1", y="PC2", color="Set", hover_name="Sample", title="PCA Projection",
-            color_discrete_map={"Train": "steelblue", "Test": "red"}
+            pca_df,
+            x="PC1",
+            y="PC2",
+            color="Set",
+            hover_name="Sample",
+            title="PCA Projection",
+            color_discrete_map={"Train": "steelblue", "Test": "red"},
         )
         st.plotly_chart(fig_pca, use_container_width=True)
 
@@ -238,24 +277,21 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
         tsne_df["Sample"] = labels
         tsne_df["Set"] = set_labels
         fig_tsne = px.scatter(
-            tsne_df, x="Dim1", y="Dim2", color="Set", hover_name="Sample", title="t-SNE Projection",
-            color_discrete_map={"Train": "steelblue", "Test": "red"}
+            tsne_df,
+            x="Dim1",
+            y="Dim2",
+            color="Set",
+            hover_name="Sample",
+            title="t-SNE Projection",
+            color_discrete_map={"Train": "steelblue", "Test": "red"},
         )
         st.plotly_chart(fig_tsne, use_container_width=True)
 
-        # UMAP Plot
-        umap_df = pd.DataFrame(umap_emb, columns=["UMAP1", "UMAP2"])
-        umap_df["Sample"] = labels
-        umap_df["Set"] = set_labels
-        fig_umap = px.scatter(
-            umap_df, x="UMAP1", y="UMAP2", color="Set", hover_name="Sample", title="UMAP Projection",
-            color_discrete_map={"Train": "steelblue", "Test": "red"}
-        )
-        st.plotly_chart(fig_umap, use_container_width=True)
-
     # === Coordinates Map ===
     if not coords_file:
-        st.warning("To plot your samples on a geographic map, please upload the training proxy coordinates dataset.")
+        st.warning(
+            "To plot your samples on a geographic map, please upload the training proxy coordinates dataset."
+        )
         return
 
     st.subheader("Site Coordinates Map")
@@ -266,4 +302,6 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
     st.components.v1.html(map_html, height=800, scrolling=True)
 
     with open(map_path, "rb") as f:
-        st.download_button("Download Map HTML", f, file_name="map_output.html", mime="text/html")
+        st.download_button(
+            "Download Map HTML", f, file_name="map_output.html", mime="text/html"
+        )

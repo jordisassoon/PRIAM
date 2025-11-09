@@ -21,11 +21,166 @@ from utils.dataloader import ProxyDataLoader
 from validation.cross_validate import run_grouped_cv
 from utils.colors import color_map
 
+
 @st.cache_data
-def hellinger_transform(df):
-    """Apply Hellinger transformation to the DataFrame."""
-    df = df + 1e-9  # Avoid division by zero
-    return df.apply(lambda x: np.sqrt(x) / np.sqrt(x.sum()), axis=1)
+def plot_mat_tsne(
+    modern_coords, fossil_coords, train_metadata, test_metadata, predictions, neighbors_info, target
+):
+    combined_df, links_df = create_mat_tsne_df(
+        modern_coords, fossil_coords, train_metadata, test_metadata, predictions, neighbors_info, target
+    )
+
+    offset = 2
+    tsne1_min = combined_df["TSNE1"].min() - offset
+    tsne1_max = combined_df["TSNE1"].max() + offset
+    tsne2_min = combined_df["TSNE2"].min() - offset
+    tsne2_max = combined_df["TSNE2"].max() + offset
+
+    # Selection for fossils
+    fossil_select = alt.selection_single(fields=["OBSNAME"], on="click")
+
+    # Base scatter: Fossil + Modern
+    base = (
+        alt.Chart(combined_df)
+        .mark_circle()
+        .encode(
+            x=alt.X(
+                "TSNE1:Q",
+                title="t-SNE 1",
+                scale=alt.Scale(domain=(tsne1_min, tsne1_max)),
+            ),
+            y=alt.Y(
+                "TSNE2:Q",
+                title="t-SNE 2",
+                scale=alt.Scale(domain=(tsne2_min, tsne2_max)),
+            ),
+            color=alt.Color(
+                "PlotType:N",
+                scale=alt.Scale(
+                    domain=["Fossil", "Modern", "Neighbor"],
+                    range=["red", "steelblue", "orange"],
+                ),
+                legend=alt.Legend(title="Point Type"),
+            ),
+            opacity=alt.condition(fossil_select, alt.value(1.0), alt.value(0.3)),
+            tooltip=["OBSNAME:N", "Type:N", "Predicted:Q"],
+        )
+        .add_params(fossil_select)
+    )
+
+    # Neighbor points: orange, only show when fossil is selected
+    neighbor_points = (
+        alt.Chart(links_df)
+        .mark_circle()
+        .encode(
+            x="modern_TSNE1:Q",
+            y="modern_TSNE2:Q",
+            color=alt.Color(
+                "PlotType:N",
+                scale=alt.Scale(
+                    domain=["Fossil", "Modern", "Neighbor"],
+                    range=["red", "steelblue", "orange"],
+                ),
+                legend=alt.Legend(title="Point Type"),
+            ),
+            tooltip=["neighbor:N", "distance:Q"],
+            opacity=alt.condition(fossil_select, alt.value(1.0), alt.value(0.0)),
+        )
+    )
+
+    # Connections: lines between fossils and neighbors
+    connections = (
+        alt.Chart(links_df)
+        .mark_line(color="orange", opacity=0.6)
+        .encode(
+            x="fossil_TSNE1:Q",
+            y="fossil_TSNE2:Q",
+            x2="modern_TSNE1:Q",
+            y2="modern_TSNE2:Q",
+            tooltip=["neighbor:N", "distance:Q"],
+        )
+        .transform_filter(fossil_select)
+    )
+
+    # Combine layers
+    chart = (
+        alt.layer(base, neighbor_points, connections)
+        .resolve_scale(x="shared", y="shared")
+        .interactive()
+    )
+
+    return chart
+
+
+@st.cache_data
+def create_mat_tsne_df(
+    modern_coords, fossil_coords, train_metadata, test_metadata, predictions, neighbors_info, target
+):
+    # Prepare modern dataframe
+    modern_df = train_metadata.copy()
+    modern_df["Type"] = "Modern"
+    modern_df["Predicted"] = np.nan
+    modern_df["TSNE1"] = modern_coords[:, 0]
+    modern_df["TSNE2"] = modern_coords[:, 1]
+
+    # Prepare fossil dataframe
+    fossil_df = pd.DataFrame(
+        {
+            "OBSNAME": test_metadata["OBSNAME"],
+            "TSNE1": fossil_coords[:, 0],
+            "TSNE2": fossil_coords[:, 1],
+            "Type": "Fossil",
+            "Predicted": predictions,
+        }
+    )
+
+    combined_df = pd.concat([modern_df, fossil_df], ignore_index=True)
+
+    # Build links dataframe
+    link_rows = []
+    for i, info in enumerate(neighbors_info):
+        fossil_name = test_metadata.iloc[i]["OBSNAME"]  # TODO: use actual labels
+        f_tsne1, f_tsne2 = fossil_coords[i]
+        for n in info["neighbors"]:
+            obsname = n["metadata"]["OBSNAME"]
+            if obsname in modern_df["OBSNAME"].values:
+                m_row = modern_df.loc[modern_df["OBSNAME"] == obsname].iloc[0]
+                link_rows.append(
+                    {
+                        "fossil": fossil_name,
+                        "neighbor": obsname,
+                        "distance": n["distance"],
+                        "fossil_TSNE1": f_tsne1,
+                        "fossil_TSNE2": f_tsne2,
+                        "modern_TSNE1": m_row["TSNE1"],
+                        "modern_TSNE2": m_row["TSNE2"],
+                    }
+                )
+    
+    links_df = pd.DataFrame(link_rows)
+    links_df = links_df.rename(columns={"fossil": "OBSNAME"})
+
+    # Define PlotType for fossils/modern
+    combined_df["PlotType"] = combined_df["Type"].apply(
+        lambda t: "Fossil" if t == "Fossil" else "Modern"
+    )
+    links_df["PlotType"] = "Neighbor"
+
+    return combined_df, links_df
+
+
+@st.cache_data
+def compute_mat_tsne(X_train, X_test):
+    """Compute t-SNE coordinates for MAT nearest neighbors visualization."""
+    combined = np.vstack([X_train, X_test])
+    tsne = TSNE(n_components=2, perplexity=30, random_state=42)
+    coords = tsne.fit_transform(combined)
+
+    modern_coords = coords[: len(X_train)]
+    fossil_coords = coords[len(X_train) :]
+
+    return modern_coords, fossil_coords
+
 
 def show_tab(
     train_climate_file,
@@ -75,26 +230,6 @@ def show_tab(
     X_train, y_train, obs_names = loader.load_training_data(target)
     X_test, ages_or_depths = loader.load_test_data(age_or_depth=axis)
     X_train_aligned, X_test_aligned, shared_cols = loader.align_taxa(X_train, X_test)
-
-    # --- Taxa selection expander ---
-    if shared_cols is not None and len(shared_cols) > 0:
-        with st.expander("Select taxa to include in the model"):
-            # Dictionary to hold user selections
-            taxa_selection = {}
-            for taxa in shared_cols:
-                taxa_selection[taxa] = st.checkbox(taxa, value=True)  # default checked
-
-            # Filter columns based on selections
-            selected_taxa = [
-                taxa for taxa, include in taxa_selection.items() if include
-            ]
-
-            if len(selected_taxa) == 0:
-                st.warning("⚠️ No taxa selected. Predictions may fail.")
-            else:
-                # Apply selection to aligned data
-                X_train_aligned = X_train_aligned[selected_taxa]
-                X_test_aligned = X_test_aligned[selected_taxa]
 
     # --- Prepare Models ---
     available_models = {
@@ -177,15 +312,15 @@ def show_tab(
 
     # --- Prepare Plotly figure ---
     fig = go.Figure()
-    
+
     for col in df_plot_combined.columns:
         if col == axis_string:
             continue
-        
+
         # Determine base model name for color
         base_name = col.replace("_smoothed", "")
         color = color_map.get(base_name, "#7f7f7f")  # default gray if not in map
-        
+
         # Determine line style and name
         if "_smoothed" in col:
             line_width = 3
@@ -195,7 +330,7 @@ def show_tab(
             line_width = 1
             dash = "dot"
             name = f"{base_name} (Per Sample)"
-        
+
         fig.add_trace(
             go.Scatter(
                 x=df_plot_combined[axis_string],
@@ -203,7 +338,7 @@ def show_tab(
                 mode="lines+markers",
                 name=name,
                 line=dict(color=color, width=line_width, dash=dash),
-                hovertemplate=f"%{{x}} {axis_string}<br>%{{y}} Prediction<br>Model: {name}<extra></extra>"
+                hovertemplate=f"%{{x}} {axis_string}<br>%{{y}} Prediction<br>Model: {name}<extra></extra>",
             )
         )
 
@@ -217,9 +352,7 @@ def show_tab(
         margin=dict(l=60, r=20, t=50, b=80),
         xaxis_title=axis_string,
         yaxis_title="Prediction",
-        xaxis=dict(
-            autorange="reversed" if mirror_x else True  # ✅ Simpler
-        ),
+        xaxis=dict(autorange="reversed" if mirror_x else True),  # ✅ Simpler
         hovermode="x unified",
     )
 
@@ -238,149 +371,25 @@ def show_tab(
 
         st.subheader("MAT Nearest Neighbors Explorer (t-SNE Space)")
 
-        from sklearn.manifold import TSNE
+        modern_coords, fossil_coords = compute_mat_tsne(X_train_aligned, X_test_aligned)
 
-        # Fit t-SNE on combined taxa data
-        combined_matrix = np.vstack([X_train_aligned.values, X_test_aligned.values])
-
-        # Hellinger transformation
-        combined_matrix = hellinger_transform(pd.DataFrame(combined_matrix)).values
-
-        tsne = TSNE(
-            n_components=2, perplexity=30, random_state=42
-        )
-        coords = tsne.fit_transform(combined_matrix)
-
-        # Split coordinates
-        modern_coords = coords[: len(X_train_aligned)]
-        fossil_coords = coords[len(X_train_aligned) :]
-
-        # Prepare modern dataframe
+        # Load training metadata for tooltips
         train_climate_file.seek(0)
-        train_meta = pd.read_csv(train_climate_file, encoding="latin1")
-        modern_df = train_meta.copy()
-        modern_df["Type"] = "Modern"
-        modern_df["Predicted"] = np.nan
-        modern_df["TSNE1"] = modern_coords[:, 0]
-        modern_df["TSNE2"] = modern_coords[:, 1]
+        train_metadata = pd.read_csv(train_climate_file, encoding="latin1")
+        test_metadata = pd.DataFrame({"OBSNAME": [f"{axis}: {val}" for val in ages_or_depths]})
 
-        # Prepare fossil dataframe with formatted labels
-        if axis == "Age":
-            fossil_labels = ages_or_depths.apply(lambda x: f"Age: {x}").astype(str)
-        elif axis == "Depth":
-            fossil_labels = ages_or_depths.apply(lambda x: f"Depth: {x}").astype(str)
-        else:
-            fossil_labels = [f"Fossil_{i}" for i in range(len(ages_or_depths))]
-
-        # Prepare fossil dataframe
-        fossil_df = pd.DataFrame(
-            {
-                "OBSNAME": fossil_labels,
-                "TSNE1": fossil_coords[:, 0],
-                "TSNE2": fossil_coords[:, 1],
-                "Type": "Fossil",
-                axis_string: ages_or_depths.values,
-                f"Predicted_{target}": predictions_dict["MAT"],
-            }
+        neighbors_info = mat_model.get_neighbors_info(X_test_aligned.values, 
+            metadata_df=train_metadata, return_distance=True
         )
-        fossil_df["Predicted"] = fossil_df[f"Predicted_{target}"]
-
-        # Get nearest neighbor info from MAT
-        neighbor_info = mat_model.get_neighbors_info(
-            X_test_aligned, train_meta, return_distance=True
-        )
-
-        # Build links dataframe
-        link_rows = []
-        for i, info in enumerate(neighbor_info):
-            fossil_name = fossil_df.iloc[i]["OBSNAME"]
-            f_tsne1, f_tsne2 = fossil_coords[i]
-            for n in info["neighbors"]:
-                obsname = n["metadata"]["OBSNAME"]
-                if obsname in modern_df["OBSNAME"].values:
-                    m_row = modern_df.loc[modern_df["OBSNAME"] == obsname].iloc[0]
-                    link_rows.append(
-                        {
-                            "fossil": fossil_name,
-                            "neighbor": obsname,
-                            "distance": n["distance"],
-                            "fossil_TSNE1": f_tsne1,
-                            "fossil_TSNE2": f_tsne2,
-                            "modern_TSNE1": m_row["TSNE1"],
-                            "modern_TSNE2": m_row["TSNE2"],
-                        }
-                    )
-        links_df = pd.DataFrame(link_rows)
-        links_df = links_df.rename(columns={"fossil": "OBSNAME"})
-
-        # Combine modern + fossil for base chart
-        combined_df = pd.concat([modern_df, fossil_df], ignore_index=True)
-
-        # Compute explicit TSNE axis limits
-        tsne1_min, tsne1_max = combined_df["TSNE1"].min(), combined_df["TSNE1"].max()
-        tsne2_min, tsne2_max = combined_df["TSNE2"].min(), combined_df["TSNE2"].max()
-
-        # Altair selection
-        fossil_select = alt.selection_point(fields=["OBSNAME"], on="click")
-
-        # Define PlotType for fossils/modern
-        combined_df["PlotType"] = combined_df["Type"].apply(lambda t: "Fossil" if t == "Fossil" else "Modern")
-        links_df["PlotType"] = "Neighbor"
-
-        # Base scatter: Fossil + Modern
-        base = (
-            alt.Chart(combined_df)
-            .mark_circle()
-            .encode(
-                x=alt.X("TSNE1:Q", title="t-SNE 1", scale=alt.Scale(domain=(tsne1_min, tsne1_max))),
-                y=alt.Y("TSNE2:Q", title="t-SNE 2", scale=alt.Scale(domain=(tsne2_min, tsne2_max))),
-                color=alt.Color(
-                    "PlotType:N",
-                    scale=alt.Scale(domain=["Fossil", "Modern", "Neighbor"], range=["red", "steelblue", "orange"]),
-                    legend=alt.Legend(title="Point Type")
-                ),
-                opacity=alt.condition(fossil_select, alt.value(1.0), alt.value(0.3)),
-                tooltip=["OBSNAME:N", "Type:N", "Predicted:Q"],
-            )
-            .add_params(fossil_select)
-        )
-
-        # Neighbor points: orange, only show when fossil is selected
-        neighbor_points = (
-            alt.Chart(links_df)
-            .mark_circle()
-            .encode(
-                x="modern_TSNE1:Q",
-                y="modern_TSNE2:Q",
-                color=alt.Color(
-                    "PlotType:N",
-                    scale=alt.Scale(domain=["Fossil", "Modern", "Neighbor"], range=["red", "steelblue", "orange"]),
-                    legend=alt.Legend(title="Point Type")
-                ),
-                tooltip=["neighbor:N", "distance:Q"],
-                opacity=alt.condition(fossil_select, alt.value(1.0), alt.value(0.0)),
-            )
-        )
-
-        # Connections: lines between fossils and neighbors
-        connections = (
-            alt.Chart(links_df)
-            .mark_line(color="orange", opacity=0.6)
-            .encode(
-                x="fossil_TSNE1:Q",
-                y="fossil_TSNE2:Q",
-                x2="modern_TSNE1:Q",
-                y2="modern_TSNE2:Q",
-                tooltip=["neighbor:N", "distance:Q"],
-            )
-            .transform_filter(fossil_select)
-        )
-
-        # Combine layers
-        chart = (
-            alt.layer(base, neighbor_points, connections)
-            .resolve_scale(x="shared", y="shared")
-            .interactive()
+        
+        chart = plot_mat_tsne(
+            modern_coords=modern_coords,
+            fossil_coords=fossil_coords,
+            train_metadata=train_metadata,
+            test_metadata=test_metadata,
+            predictions=predictions_dict["MAT"],
+            neighbors_info=neighbors_info,
+            target=target,
         )
 
         st.altair_chart(chart, use_container_width=True)
@@ -391,16 +400,15 @@ def show_tab(
             "Other points fade out."
         )
 
-
     # --- RF Tree Visualization ---
     if model_choice in ["RF", "All"]:
         if model_choice == "All":
             rf_model = model
         else:
             rf_model = model
-        
+
         st.subheader(f"RF Model Visualization")
-        
+
         # --- Feature Importances ---
         if hasattr(rf_model, "feature_importances_"):
             st.markdown("### 🔍 Feature Importance")
@@ -434,22 +442,23 @@ def show_tab(
 
             st.plotly_chart(fig, use_container_width=True)
 
-
     # --- BRT Tree Visualization ---
     if model_choice in ["BRT", "All"]:
         if model_choice == "All":
             brt_model = model
         else:
             brt_model = model
-        
+
         st.subheader(f"BRT Model Visualization")
-        
+
         # --- Feature Importances ---
         if hasattr(brt_model, "feature_importances_"):
             st.markdown("### 🔍 Feature Importance")
 
             # For LightGBM, you can choose 'split' or 'gain'
-            importances = brt_model.feature_importances_  # default is 'split', use brt_model.feature_importance(importance_type='gain') if needed
+            importances = (
+                brt_model.feature_importances_
+            )  # default is 'split', use brt_model.feature_importance(importance_type='gain') if needed
 
             feature_names = list(X_train_aligned.columns)
 

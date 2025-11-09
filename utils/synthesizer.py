@@ -6,10 +6,7 @@ import numpy as np
 
 
 def synthesize_data(df: pd.DataFrame, sample_size=200) -> pd.DataFrame:
-    metadata = Metadata.detect_from_dataframe(
-        data=df,
-        table_name='synthesized_table'
-    )
+    metadata = Metadata.detect_from_dataframe(data=df, table_name="synthesized_table")
     model = GaussianCopulaSynthesizer(metadata)
     model.fit(df)
     synthetic_df = model.sample(sample_size)
@@ -39,11 +36,15 @@ def add_index_trend(df: pd.DataFrame, slope_range=(0.01, 0.1), noise_level=1.0):
     """
     df_trend = df.copy()
     numeric_cols = df_trend.select_dtypes(include=[np.number]).columns
-    
+
     for col in numeric_cols:
         slope = np.random.uniform(*slope_range)
-        df_trend[col] = df_trend[col] + slope * np.arange(len(df_trend)) + np.random.normal(0, noise_level, len(df_trend))
-    
+        df_trend[col] = (
+            df_trend[col]
+            + slope * np.arange(len(df_trend))
+            + np.random.normal(0, noise_level, len(df_trend))
+        )
+
     return df_trend
 
 
@@ -55,7 +56,9 @@ if __name__ == "__main__":
     test_data = "./data/scrubbed_SAR.csv"
 
     # Load data
-    climate_df = pd.read_csv(climate_data, encoding="latin1", delimiter=",")[["OBSNAME", "TANN", "PANN", "MTWA", "MTCO"]]
+    climate_df = pd.read_csv(climate_data, encoding="latin1", delimiter=",")[
+        ["OBSNAME", "TANN", "PANN", "MTWA", "MTCO"]
+    ]
     coords_df = pd.read_csv(coords_data, encoding="latin1", delimiter=",")
     pollen_df = pd.read_csv(pollen_data, encoding="latin1", delimiter=",")
     test_df = pd.read_csv(test_data, encoding="latin1", delimiter=",")
@@ -66,7 +69,8 @@ if __name__ == "__main__":
 
     # Find columns that are nonzero in both
     nonzero_cols = [
-        col for col in common_cols
+        col
+        for col in common_cols
         if (pollen_df[col] != 0).any() and (test_df[col] != 0).any()
     ]
 
@@ -94,9 +98,11 @@ if __name__ == "__main__":
     synthetic_coords.to_csv("data/synthetic_coords_data.csv", index=False)
 
     synthetic_pollen = synthetic_df[pollen_df.columns]
-    
+
     # --- Add random +1s ("salt and pepper") ---
-    synthetic_pollen = add_random_ones(synthetic_pollen, amount=0.20)  # 2% of cells get +1
+    synthetic_pollen = add_random_ones(
+        synthetic_pollen, amount=0.20
+    )  # 2% of cells get +1
 
     synthetic_pollen.to_csv("data/synthetic_modern_data.csv", index=False)
 
@@ -106,8 +112,10 @@ if __name__ == "__main__":
     synthetic_test_df["Depth"] = 2 * synthetic_test_df["Age"]
 
     synthetic_test_df.sort_values(by="Age", inplace=True)
-    
+
     # --- Add random +1s ("salt and pepper") ---
-    synthetic_test_df = add_random_ones(synthetic_test_df, amount=0.50)  # 20% of cells get +1
+    synthetic_test_df = add_random_ones(
+        synthetic_test_df, amount=0.50
+    )  # 20% of cells get +1
 
     synthetic_test_df.to_csv("data/synthetic_test_data.csv", index=False)

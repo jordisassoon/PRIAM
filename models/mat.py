@@ -41,9 +41,7 @@ class MAT(KNeighborsRegressor):
         """
         # Initialize the KNeighborsRegressor with a custom metric and parallel processing.
         # n_jobs=-1 ensures that all CPU cores are used for neighbor searches.
-        super().__init__(
-            n_neighbors=n_neighbors, metric=self._mat_distance, **kwargs
-        )
+        super().__init__(n_neighbors=n_neighbors, metric=self._mat_distance, **kwargs)
 
         # Store training data internally for neighbor metadata queries.
         self._fitted_X = None

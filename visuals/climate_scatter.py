@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import click
 
+
 @click.command()
 @click.argument("climate_file", type=click.Path(exists=True))
 @click.option("--x-var", required=True, help="Climate variable for x-axis")
@@ -12,7 +13,7 @@ def main(climate_file, x_var, y_var, output_file):
     """Plot a scatter plot of two climate variables against each other."""
 
     # ==== LOAD DATA ====
-    climate_df = pd.read_csv(climate_file, delimiter=',', encoding='latin1')
+    climate_df = pd.read_csv(climate_file, delimiter=",", encoding="latin1")
 
     if x_var not in climate_df.columns:
         raise ValueError(f"Column '{x_var}' not found in climate dataset")
@@ -24,12 +25,13 @@ def main(climate_file, x_var, y_var, output_file):
     sns.scatterplot(x=x_var, y=y_var, data=climate_df)
     plt.xlabel(x_var)
     plt.ylabel(y_var)
-    plt.title(f'{y_var} vs {x_var}')
+    plt.title(f"{y_var} vs {x_var}")
     plt.tight_layout()
 
     # ==== SAVE PLOT ====
     plt.savefig(output_file, dpi=300)
     print(f"Scatter plot of {y_var} vs {x_var} saved to {output_file}")
+
 
 if __name__ == "__main__":
     main()
