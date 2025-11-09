@@ -248,8 +248,8 @@ def cached_fit_mat(X_train, y_train, n_neighbors):
 
 
 @st.cache_data
-def cached_fit_rf(X_train, y_train, X_test, n_trees, random_seed):
-    rf_model = RF(n_estimators=n_trees, random_state=random_seed)
+def cached_fit_rf(X_train, y_train, X_test, n_trees, max_depth, random_seed):
+    rf_model = RF(n_estimators=n_trees, max_depth=max_depth, random_state=random_seed)
     rf_model.fit(X_train, y_train)
     return rf_model
 
@@ -290,6 +290,7 @@ def show_tab(
             y_train,
             X_test,
             st.session_state.get("rf_trees", None),
+            st.session_state.get("rf_max_depth", None),
             st.session_state.get("random_seed", None),
         )
         predictions_dict["RF"] = rf_model.predict(X_test)

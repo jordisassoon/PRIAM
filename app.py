@@ -53,8 +53,11 @@ with model_expander:
         n_neighbors = st.number_input("MAT Neighbors", 1, 20, value=st.session_state["n_neighbors"], key="n_neighbors")
     if st.session_state["use_brt"]:
         brt_trees = st.number_input("BRT Trees", 1, 1000, value=st.session_state["brt_trees"], key="brt_trees")
+        brt_learning_rate = st.number_input("BRT Learning Rate", 0.01, 1.0, value=st.session_state["brt_learning_rate"], key="brt_learning_rate")
+        brt_max_depth = st.number_input("BRT Max Depth", 1, 20, value=st.session_state["brt_max_depth"], key="brt_max_depth")
     if st.session_state["use_rf"]:
         rf_trees = st.number_input("RF Trees", 1, 1000, value=st.session_state["rf_trees"], key="rf_trees")
+        rf_max_depth = st.number_input("RF Max Depth", 1, 20, value=st.session_state["rf_max_depth"], key="rf_max_depth")
     cv_folds = st.number_input("CV Folds", 1, 10, value=st.session_state["cv_folds"], key="cv_folds")
     random_seed = st.number_input("Random Seed", value=st.session_state["random_seed"], key="random_seed")
 
@@ -95,7 +98,7 @@ with data_expander:
 
         # Download button
         st.download_button(
-            label="Download Dummy Data", data=zip_buffer, file_name="dummy_data.zip", mime="application/zip"
+            label="Download Dummy Data", data=zip_buffer, file_name="dummy_data.zip", mime="application/zip", use_container_width=True
         )
     else:
         # --- Sidebar: File Uploads ---

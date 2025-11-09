@@ -22,7 +22,7 @@ def reset_state():
 def load_state_from_dict(state_dict: dict):
     """Load session state from a provided dictionary."""
     for key, value in state_dict.items():
-        if "file" in key and not state_dict.get("use_dummy", False):
+        if "file" in key and not state_dict.get("use_dummy", False) and value is not None:
             st.sidebar.warning(f"Please use the following data for '{key}': {value}")
         elif key in get_default_state_config():
             st.session_state[key] = value
