@@ -1,8 +1,9 @@
 def get_default_state_config():
     # --- Initialize session state defaults ---
     return {
-        "model_choice": "MAT",
-        "model_choices": ["MAT", "BRT", "RF", "All"],
+        "use_mat": True,
+        "use_brt": False,
+        "use_rf": False,
         "target": "TANN",
         "target_cols": ["TANN", "PANN", "MTWA", "MTCO"],
         "taxa_cols": {},

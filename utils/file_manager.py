@@ -2,6 +2,7 @@ import streamlit as st
 import io
 from utils.csv_loader import read_csv_auto_delimiter
 from utils.state_manager import update_state
+import zipfile
 
 
 def load_dummy_file(path):
@@ -46,3 +47,14 @@ def load_file(uploaded_file):
     except Exception as e:
         st.error(f"Failed to load uploaded file: {e}")
         return None
+
+def make_zip(files_dict: dict, zip_name: str = "data.zip") -> io.BytesIO:
+    """Return an in-memory ZIP file from a dict of {filename: BytesIO}."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for filename, file_obj in files_dict.items():
+            if file_obj is not None:
+                file_obj.seek(0)
+                zf.writestr(filename, file_obj.read())
+    buffer.seek(0)
+    return buffer

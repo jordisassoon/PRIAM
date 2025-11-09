@@ -173,7 +173,7 @@ class MAT(KNeighborsRegressor):
                 if return_distance:
                     info["distance"] = float(distances[i][rank])
                 # Extract metadata for the neighbor
-                info["metadata"] = metadata_df.iloc[idx].to_dict()
+                info["metadata"] = metadata_df.iloc[idx]
                 neighbor_info.append(info)
             results.append({"query_index": i, "neighbors": neighbor_info})
 

@@ -71,14 +71,14 @@ class ProxyDataLoader:
         # Normalize rows
         X_taxa = self._normalize_rows(X_taxa)
 
-        return X_taxa, y, obs_names
+        return X_taxa, y, pd.DataFrame({"OBSNAME": obs_names})
 
     def load_test_data(self, age_or_depth) -> Tuple[pd.DataFrame, pd.Series]:
         test_df = read_csv_auto_delimiter(self.test_file)
         if self.mask_file:
             mask_df = read_csv_auto_delimiter(self.mask_file)
 
-        meta_cols = ["Depth", "Age", "OBSNAME"]
+        meta_cols = ["Depth", "Age"]
         col = "Age" if age_or_depth == "Age" else "Depth"
         ages_or_depths = test_df[col] if col in test_df.columns else pd.Series(np.arange(len(test_df)))
         taxa_cols = [c for c in test_df.columns if c not in meta_cols]
@@ -88,7 +88,7 @@ class ProxyDataLoader:
             X_test = self.filter_taxa_by_mask(X_test, mask_df)
 
         X_test = self._normalize_rows(X_test)
-        return X_test, ages_or_depths
+        return X_test, pd.DataFrame({col: ages_or_depths})
 
     def align_taxa(self, X_train: pd.DataFrame, X_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         train_cols = set(X_train.columns)

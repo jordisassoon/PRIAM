@@ -23,7 +23,7 @@ from utils.colors import color_map
 
 
 @st.cache_data
-def plot_prediction_lines(df_plot_combined, axis_string, mirror_x, model_flags):
+def plot_prediction_lines(df_plot_combined, axis_string, mirror_x):
     # --- Prepare Plotly figure for predictions ---
     fig = go.Figure()
 
@@ -51,8 +51,7 @@ def plot_prediction_lines(df_plot_combined, axis_string, mirror_x, model_flags):
                 y=df_plot_combined[col],
                 mode="lines+markers",
                 name=name,
-                line=dict(color=color, width=line_width, dash=dash),
-                hovertemplate=f"%{{x}} {axis_string}<br>%{{y}} Prediction<br>Model: {name}<extra></extra>",
+                line=dict(color=color, width=line_width, dash=dash)
             )
         )
 
@@ -60,13 +59,6 @@ def plot_prediction_lines(df_plot_combined, axis_string, mirror_x, model_flags):
     fig.update_layout(
         width=800,
         height=400,
-        legend=dict(
-            x=0.98,  # push legend to the right
-            y=0.98,  # push legend to the top
-            xanchor="right",  # anchor legend box to its right edge
-            yanchor="top",  # anchor legend box to its top edge
-            font=dict(size=12),
-        ),
         margin=dict(l=0, r=0, t=0, b=0),
         xaxis_title=axis_string,
         yaxis_title="Prediction",
@@ -206,13 +198,13 @@ def create_mat_tsne_df(
     # Prepare modern dataframe
     tsne_df = pd.DataFrame(tsne_coords, columns=["TSNE1", "TSNE2"])
     tsne_df["Type"] = ["Modern"] * len(train_metadata) + ["Fossil"] * len(test_metadata)
-    tsne_df["OBSNAME"] = list(train_metadata["OBSNAME"]) + list(test_metadata["OBSNAME"])
+    tsne_df["OBSNAME"] = list(train_metadata["OBSNAME"]) + list(test_metadata[st.session_state.get("prediction_axis", "Age")])
     tsne_df["Predicted"] = list(ground_truth) + list(predictions)
 
     # Build links dataframe
     link_rows = []
     for i, info in enumerate(neighbors_info):
-        fossil_name = test_metadata.iloc[i]["OBSNAME"]
+        fossil_name = test_metadata.iloc[i][st.session_state.get("prediction_axis", "Age")]
         f_tsne1, f_tsne2 = tsne_df.loc[tsne_df["OBSNAME"] == fossil_name, ["TSNE1", "TSNE2"]].values[0]
         for n in info["neighbors"]:
             obsname = n["metadata"]["OBSNAME"]
@@ -278,20 +270,19 @@ def show_tab(
     y_train,
     train_metadata,
     test_metadata,
-    ages_or_depths,
-    obs_names,
-    shared_cols,
-    model_flags,
-    axis,
 ):
     st.header("Predictions & Model Visualizations")
 
+    if X_train is None or X_test is None or y_train is None:
+        st.warning("Please upload training and test datasets in the 'Data Upload' section.")
+        return
+
     predictions_dict = {}
 
-    if "MAT" in model_flags:
+    if st.session_state.get("use_mat"):
         mat_model = cached_fit_mat(X_train, y_train, st.session_state.get("n_neighbors", None))
         predictions_dict["MAT"] = mat_model.predict(X_test)
-    if "RF" in model_flags:
+    if st.session_state.get("use_rf"):
         rf_model = cached_fit_rf(
             X_train,
             y_train,
@@ -300,7 +291,7 @@ def show_tab(
             st.session_state.get("random_seed", None),
         )
         predictions_dict["RF"] = rf_model.predict(X_test)
-    if "BRT" in model_flags:
+    if st.session_state.get("use_brt"):
         brt_model = cached_fit_brt(
             X_train,
             y_train,
@@ -313,9 +304,9 @@ def show_tab(
 
     # --- Combine Predictions ---
     df_preds = pd.DataFrame(predictions_dict)
-    axis_string = f"{axis}"
-    df_preds[axis_string] = ages_or_depths.values
-    df_plot = df_preds.set_index(axis_string)
+    df_preds = df_preds.join(test_metadata.reset_index(drop=True)) # Join metadata for display
+    axis_string = st.session_state.get("prediction_axis", "Age")
+    df_plot = df_preds.set_index(axis_string).sort_index()
 
     # --- Layout for Plot and Controls ---
     predictions_plot_expander = st.expander("Prediction Plot Settings", expanded=False)
@@ -331,17 +322,17 @@ def show_tab(
             df_plot_combined = df_plot.reset_index()
 
         # --- Mirror X Axis ---
-        mirror_x = st.toggle(f"Mirror {axis} axis", value=False, key="mirror_x")
+        mirror_x = st.toggle(f"Mirror x-axis", value=False, key="mirror_x")
 
     # --- Plot Predictions ---
-    plot_prediction_lines(df_plot_combined, axis_string, mirror_x, model_flags)
+    plot_prediction_lines(df_plot_combined, axis_string, mirror_x)
 
     # --- Show DataFrame in Streamlit ---
     st.subheader("Prediction Data Table")
-    st.dataframe(df_preds)  # 👈 Interactive table
+    st.dataframe(df_plot)  # 👈 Interactive table
 
     # === MAT Interactive Nearest Neighbors (t-SNE Space) ===
-    if "MAT" in model_flags:
+    if st.session_state.get("use_mat"):
         st.subheader("MAT Nearest Neighbors Explorer (t-SNE Space)")
 
         tsne_coords = compute_mat_tsne(X_train, X_test)
@@ -371,7 +362,7 @@ def show_tab(
         )
 
     # --- RF Tree Visualization ---
-    if "RF" and "BRT" in model_flags:
+    if st.session_state.get("use_rf") and st.session_state.get("use_brt"):
         st.subheader(f"Trees Feature Importance Visualization")
         col1, col2 = st.columns(2)
         with col1:
@@ -379,14 +370,14 @@ def show_tab(
         with col2:
             feature_importance_plot(brt_model, "Boosted Regression Trees", X_train)
 
-    elif "RF" in model_flags:
+    elif st.session_state.get("use_rf"):
         st.subheader(f"Trees Feature Importance Visualization")
         feature_importance_plot(rf_model, "Random Forest", X_train)
-    elif "BRT" in model_flags:
+    elif st.session_state.get("use_brt"):
         st.subheader(f"Trees Feature Importance Visualization")
         feature_importance_plot(brt_model, "Boosted Regression Trees", X_train)
 
-    if "RF" or "BRT" in model_flags:
+    if st.session_state.get("use_rf") or st.session_state.get("use_brt"):
         st.info(
             "Feature importance indicates how much each taxa contributed to the model's predictions. "
             "Higher importance means the taxa was more influential."

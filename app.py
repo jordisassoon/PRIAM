@@ -13,7 +13,7 @@ from utils.state_manager import (
     load_state_from_yaml,
     update_state,
 )
-from utils.file_manager import load_dummy_file, get_non_obs_columns
+from utils.file_manager import load_dummy_file, get_non_obs_columns, make_zip
 from utils.defaults import get_default_state_config
 from tabs import predictions, data_exploration, validation
 from utils.csv_loader import read_csv_auto_delimiter
@@ -38,15 +38,9 @@ model_expander = st.sidebar.expander("Model Configuration", expanded=False)
 
 with model_expander:
     # --- Sidebar: Model Configuration ---
-    st.toggle("MAT", value=True, key="use_mat")
-    st.toggle("BRT", value=False, key="use_brt")
-    st.toggle("RF", value=False, key="use_rf")
-
-    model_flags = {
-        "MAT": st.session_state.get("use_mat", False),
-        "BRT": st.session_state.get("use_brt", False),
-        "RF": st.session_state.get("use_rf", False),
-    }
+    st.toggle("MAT", value=st.session_state["use_mat"], key="use_mat")
+    st.toggle("BRT", value=st.session_state["use_brt"], key="use_brt")
+    st.toggle("RF", value=st.session_state["use_rf"], key="use_rf")
 
     # Target depends on uploaded climate file
     target = st.selectbox(
@@ -69,7 +63,8 @@ with model_expander:
 
     taxa_expander = st.expander("Select Taxa", expanded=False)
     with taxa_expander:
-        st.write("Taxa selection will appear here after uploading data files.")
+        if "taxa_cols" == {}:
+            st.write("Taxa selection will appear here after uploading data files.")
 
 data_expander = st.sidebar.expander("Data Loading", expanded=False)
 with data_expander:
@@ -88,7 +83,23 @@ with data_expander:
         taxa_mask_file = None
         coords_file = load_dummy_file("./data/synthetic_coords_data.csv")
 
-        # TODO: button for downloading dummy data files
+        files = {
+            "synthetic_climate_data.csv": train_climate_file,
+            "synthetic_modern_data.csv": train_proxy_file,
+            "synthetic_test_data.csv": test_proxy_file,
+            "synthetic_coords_data.csv": coords_file,
+        }
+
+        # Create ZIP
+        zip_buffer = make_zip(files, "dummy_data.zip")
+
+        # Download button
+        st.download_button(
+            label="Download Dummy Data",
+            data=zip_buffer,
+            file_name="dummy_data.zip",
+            mime="application/zip"
+        )
     else:
         # --- Sidebar: File Uploads ---
         train_climate_file = st.file_uploader("Training Climate CSV", type=["csv"])
@@ -97,11 +108,11 @@ with data_expander:
         taxa_mask_file = st.file_uploader("Taxa mask CSV", type=["csv"])
         coords_file = st.file_uploader("Coordinates file (CSV)", type=["csv"])
 
-        update_state("train_climate_file", train_climate_file)
-        update_state("train_proxy_file", train_proxy_file)
-        update_state("test_proxy_file", test_proxy_file)
-        update_state("taxa_mask_file", taxa_mask_file)
-        update_state("coords_file", coords_file)
+        update_state("train_climate_file", train_climate_file.name if train_climate_file else None)
+        update_state("train_proxy_file", train_proxy_file.name if train_proxy_file else None)
+        update_state("test_proxy_file", test_proxy_file.name if test_proxy_file else None)
+        update_state("taxa_mask_file", taxa_mask_file.name if taxa_mask_file else None)
+        update_state("coords_file", coords_file.name if coords_file else None)
 
 if train_climate_file is not None and train_proxy_file is not None and test_proxy_file is not None:
     # --- Load Data ---
@@ -112,12 +123,9 @@ if train_climate_file is not None and train_proxy_file is not None and test_prox
         mask_file=taxa_mask_file,
     )
 
-    X_train, y_train, obs_names = loader.load_training_data(target)
-    X_test, ages_or_depths = loader.load_test_data(age_or_depth=prediction_axis)
+    X_train, y_train, train_metadata = loader.load_training_data(target)
+    X_test, test_metadata = loader.load_test_data(age_or_depth=prediction_axis)
     X_train_aligned, X_test_aligned, shared_cols = loader.align_taxa(X_train, X_test)
-
-    train_metadata = obs_names
-    test_metadata = pd.DataFrame({"OBSNAME": [f"{prediction_axis}: {val}" for val in ages_or_depths]})
 
     # --- Taxa selection expander ---
     if shared_cols is not None and len(shared_cols) > 0:
@@ -151,9 +159,6 @@ else:
     X_train_aligned = None
     X_test_aligned = None
     y_train = None
-    obs_names = None
-    ages_or_depths = None
-    shared_cols = None
     train_metadata = None
     test_metadata = None
 
@@ -175,13 +180,8 @@ if tab_selection == "Predictions":
         X_train=X_train_aligned,
         X_test=X_test_aligned,
         y_train=y_train,
-        train_metadata=pd.DataFrame(obs_names),
+        train_metadata=train_metadata,
         test_metadata=test_metadata,
-        ages_or_depths=ages_or_depths,
-        obs_names=obs_names,
-        shared_cols=shared_cols,
-        model_flags=model_flags,
-        axis=prediction_axis,
     )
 
 elif tab_selection == "Data Exploration":
