@@ -63,7 +63,9 @@ def main(
     for _, row in merged_df.iterrows():
         altitude = row.get(alt_col, None)
         color = colormap(altitude) if altitude is not None else "blue"
-        popup_text = f"{sample_id_col}: {row[sample_id_col]}<br>{alt_col}: {altitude if altitude is not None else 'N/A'}"
+        popup_text = (
+            f"{sample_id_col}: {row[sample_id_col]}<br>{alt_col}: {altitude if altitude is not None else 'N/A'}"
+        )
         folium.CircleMarker(
             location=[row[lat_col], row[lon_col]],
             radius=5,

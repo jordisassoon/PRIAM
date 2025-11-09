@@ -25,9 +25,7 @@ def read_csv_auto_delimiter(uploaded_file, encoding_list=None):
                 except Exception:
                     continue
             else:
-                raise ValueError(
-                    "Could not decode the uploaded file with any tried encoding."
-                )
+                raise ValueError("Could not decode the uploaded file with any tried encoding.")
     except Exception as e:
         raise ValueError(f"Error reading file: {e}")
 

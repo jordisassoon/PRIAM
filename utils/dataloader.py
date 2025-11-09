@@ -23,9 +23,7 @@ class ProxyDataLoader:
         row_sums = df.sum(axis=1)
         return df.div(row_sums.replace(0, np.nan), axis=0).fillna(0)
 
-    def load_training_data(
-        self, target: str = "TANN"
-    ) -> Tuple[pd.DataFrame, pd.Series, pd.Series]:
+    def load_training_data(self, target: str = "TANN") -> Tuple[pd.DataFrame, pd.Series, pd.Series]:
         """
         Load and merge climate and proxy training data.
         Returns X, y, and obs_names (for grouped CV).
@@ -41,9 +39,7 @@ class ProxyDataLoader:
             proxy_df = proxy_df.rename(columns={"ï»¿OBSNAME": "OBSNAME"})
 
         if "OBSNAME" not in proxy_df.columns:
-            raise ValueError(
-                "Pollen file must contain an OBSNAME column for grouped CV."
-            )
+            raise ValueError("Pollen file must contain an OBSNAME column for grouped CV.")
 
         obs_names = proxy_df["OBSNAME"]
 
@@ -65,9 +61,7 @@ class ProxyDataLoader:
 
         # Drop NaN rows
         if target not in climate_df.columns:
-            raise ValueError(
-                f"Target {target} not found in climate file. Available: {list(climate_df.columns)}"
-            )
+            raise ValueError(f"Target {target} not found in climate file. Available: {list(climate_df.columns)}")
         y = climate_df[target]
         mask_valid = (~X_taxa.isna().any(axis=1)) & (~y.isna())
         X_taxa = X_taxa.loc[mask_valid, :]
@@ -86,11 +80,7 @@ class ProxyDataLoader:
 
         meta_cols = ["Depth", "Age", "OBSNAME"]
         col = "Age" if age_or_depth == "Age" else "Depth"
-        ages_or_depths = (
-            test_df[col]
-            if col in test_df.columns
-            else pd.Series(np.arange(len(test_df)))
-        )
+        ages_or_depths = test_df[col] if col in test_df.columns else pd.Series(np.arange(len(test_df)))
         taxa_cols = [c for c in test_df.columns if c not in meta_cols]
         X_test = test_df[taxa_cols]
 
@@ -100,9 +90,7 @@ class ProxyDataLoader:
         X_test = self._normalize_rows(X_test)
         return X_test, ages_or_depths
 
-    def align_taxa(
-        self, X_train: pd.DataFrame, X_test: pd.DataFrame
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def align_taxa(self, X_train: pd.DataFrame, X_test: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         train_cols = set(X_train.columns)
         test_cols = set(X_test.columns)
 
@@ -138,9 +126,7 @@ class ProxyDataLoader:
         for train_idx, val_idx in gkf.split(X, y, groups=groups):
             yield train_idx, val_idx
 
-    def filter_taxa_by_mask(
-        self, X: pd.DataFrame, mask_df: pd.DataFrame
-    ) -> pd.DataFrame:
+    def filter_taxa_by_mask(self, X: pd.DataFrame, mask_df: pd.DataFrame) -> pd.DataFrame:
         """
         Filter columns of X according to mask_df.
         mask_df should have taxa names as columns, with values 0 (remove) or 1 (keep).
@@ -152,14 +138,10 @@ class ProxyDataLoader:
             raise ValueError("No matching taxa columns between X and mask_df.")
 
         # Keep only taxa where mask==1
-        keep_cols = [
-            col for col in shared_cols if mask_df[col].iloc[0] == 1
-        ]  # assume one-row mask
+        keep_cols = [col for col in shared_cols if mask_df[col].iloc[0] == 1]  # assume one-row mask
         removed_cols = set(shared_cols) - set(keep_cols)
         if removed_cols:
-            print(
-                f"[INFO] Removing {len(removed_cols)} taxa columns based on mask: {sorted(removed_cols)}"
-            )
+            print(f"[INFO] Removing {len(removed_cols)} taxa columns based on mask: {sorted(removed_cols)}")
 
         # Subset X to only kept columns
         X_filtered = X[keep_cols].copy()

@@ -40,9 +40,7 @@ def add_index_trend(df: pd.DataFrame, slope_range=(0.01, 0.1), noise_level=1.0):
     for col in numeric_cols:
         slope = np.random.uniform(*slope_range)
         df_trend[col] = (
-            df_trend[col]
-            + slope * np.arange(len(df_trend))
-            + np.random.normal(0, noise_level, len(df_trend))
+            df_trend[col] + slope * np.arange(len(df_trend)) + np.random.normal(0, noise_level, len(df_trend))
         )
 
     return df_trend
@@ -68,11 +66,7 @@ if __name__ == "__main__":
     common_cols = pollen_df.columns.intersection(test_df.columns)
 
     # Find columns that are nonzero in both
-    nonzero_cols = [
-        col
-        for col in common_cols
-        if (pollen_df[col] != 0).any() and (test_df[col] != 0).any()
-    ]
+    nonzero_cols = [col for col in common_cols if (pollen_df[col] != 0).any() and (test_df[col] != 0).any()]
 
     # Randomly select 10 of those
     n = min(10, len(nonzero_cols))
@@ -100,9 +94,7 @@ if __name__ == "__main__":
     synthetic_pollen = synthetic_df[pollen_df.columns]
 
     # --- Add random +1s ("salt and pepper") ---
-    synthetic_pollen = add_random_ones(
-        synthetic_pollen, amount=0.20
-    )  # 2% of cells get +1
+    synthetic_pollen = add_random_ones(synthetic_pollen, amount=0.20)  # 2% of cells get +1
 
     synthetic_pollen.to_csv("data/synthetic_modern_data.csv", index=False)
 
@@ -114,8 +106,6 @@ if __name__ == "__main__":
     synthetic_test_df.sort_values(by="Age", inplace=True)
 
     # --- Add random +1s ("salt and pepper") ---
-    synthetic_test_df = add_random_ones(
-        synthetic_test_df, amount=0.50
-    )  # 20% of cells get +1
+    synthetic_test_df = add_random_ones(synthetic_test_df, amount=0.50)  # 20% of cells get +1
 
     synthetic_test_df.to_csv("data/synthetic_test_data.csv", index=False)

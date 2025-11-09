@@ -25,14 +25,7 @@ class BRT(LGBMRegressor):
         Random seed for reproducibility.
     """
 
-    def __init__(
-        self,
-        n_estimators=100,
-        learning_rate=0.1,
-        max_depth=-1,
-        random_state=None,
-        **kwargs
-    ):
+    def __init__(self, n_estimators=100, learning_rate=0.1, max_depth=-1, random_state=None, **kwargs):
         """
         Initialize the BRT model.
 

@@ -98,9 +98,7 @@ def cached_generate_map(train_proxy_file, coords_file, topo):
     new_topo = topo
     """Cache the map generation process."""
     output_html = "map_output.html"
-    return generate_map(
-        train_proxy_file, coords_file, output_html=output_html, topo=new_topo
-    )
+    return generate_map(train_proxy_file, coords_file, output_html=output_html, topo=new_topo)
 
 
 # ======================
@@ -112,9 +110,7 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
     st.header("Data Exploration: Distribution & Train–Test Comparison")
 
     if not train_climate_file:
-        st.warning(
-            "To begin exploring data, please upload the training climate dataset."
-        )
+        st.warning("To begin exploring data, please upload the training climate dataset.")
         return
 
     # === Load climate data ===
@@ -123,9 +119,7 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
     # === Climate Variables Scatter Plot ===
     st.subheader("Modern Climate Variables Scatter Plot")
 
-    climate_options = climate_df.drop(
-        ["OBSNAME"], axis=1, errors="ignore"
-    ).columns.tolist()
+    climate_options = climate_df.drop(["OBSNAME"], axis=1, errors="ignore").columns.tolist()
     col1, col2 = st.columns(2)
     with col1:
         x_var = st.selectbox(
@@ -202,9 +196,7 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
     total_count = merged_df.groupby("binned_target")[selected_taxa].count()
     preference = (taxa_sum / total_count).reset_index()
     preference.rename(columns={selected_taxa: "preference"}, inplace=True)
-    preference["bin_label"] = preference["binned_target"].apply(
-        lambda x: f"{x.left:.2f}–{x.right:.2f}"
-    )
+    preference["bin_label"] = preference["binned_target"].apply(lambda x: f"{x.left:.2f}–{x.right:.2f}")
 
     chart = (
         alt.Chart(preference)
@@ -219,9 +211,7 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
 
     # === Train vs Test Distribution Comparison ===
     if not test_proxy_file:
-        st.warning(
-            "To compare your train and test proxies, please upload the test proxy dataset."
-        )
+        st.warning("To compare your train and test proxies, please upload the test proxy dataset.")
     else:
         test_df = load_csv(test_proxy_file)
 
@@ -234,9 +224,7 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
 
         labels = pd.concat([train_labels, test_labels], ignore_index=True)
 
-        shared_cols = [
-            c for c in train_df.columns if c in test_df.columns and c != "OBSNAME"
-        ]
+        shared_cols = [c for c in train_df.columns if c in test_df.columns and c != "OBSNAME"]
         X_train = normalize_rows(train_df[shared_cols])
         X_test = normalize_rows(test_df[shared_cols])
 
@@ -303,9 +291,7 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
 
     # === Coordinates Map ===
     if not coords_file:
-        st.warning(
-            "To plot your samples on a geographic map, please upload the training proxy coordinates dataset."
-        )
+        st.warning("To plot your samples on a geographic map, please upload the training proxy coordinates dataset.")
         return
 
     st.subheader("Site Coordinates Map")

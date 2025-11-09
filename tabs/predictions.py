@@ -89,12 +89,8 @@ def feature_importance_plot(model, model_name, X_train):
             .sort_values("Importance", ascending=False)
             .reset_index(drop=True)
         )
-        importance_df["Importance"] = importance_df["Importance"].round(
-            2
-        )  # round for better display
-        importance_df = importance_df[importance_df["Importance"] > 0][
-            :25
-        ]  # top 25 features
+        importance_df["Importance"] = importance_df["Importance"].round(2)  # round for better display
+        importance_df = importance_df[importance_df["Importance"] > 0][:25]  # top 25 features
 
         # --- Plotly Bar Chart ---
         fig = px.bar(
@@ -192,11 +188,7 @@ def plot_mat_tsne(combined_df, links_df):
     )
 
     # Combine layers
-    chart = (
-        alt.layer(base, neighbor_points, connections)
-        .resolve_scale(x="shared", y="shared")
-        .interactive()
-    )
+    chart = alt.layer(base, neighbor_points, connections).resolve_scale(x="shared", y="shared").interactive()
 
     st.altair_chart(chart, use_container_width=True)
 
@@ -214,18 +206,14 @@ def create_mat_tsne_df(
     # Prepare modern dataframe
     tsne_df = pd.DataFrame(tsne_coords, columns=["TSNE1", "TSNE2"])
     tsne_df["Type"] = ["Modern"] * len(train_metadata) + ["Fossil"] * len(test_metadata)
-    tsne_df["OBSNAME"] = list(train_metadata["OBSNAME"]) + list(
-        test_metadata["OBSNAME"]
-    )
+    tsne_df["OBSNAME"] = list(train_metadata["OBSNAME"]) + list(test_metadata["OBSNAME"])
     tsne_df["Predicted"] = list(ground_truth) + list(predictions)
 
     # Build links dataframe
     link_rows = []
     for i, info in enumerate(neighbors_info):
         fossil_name = test_metadata.iloc[i]["OBSNAME"]
-        f_tsne1, f_tsne2 = tsne_df.loc[
-            tsne_df["OBSNAME"] == fossil_name, ["TSNE1", "TSNE2"]
-        ].values[0]
+        f_tsne1, f_tsne2 = tsne_df.loc[tsne_df["OBSNAME"] == fossil_name, ["TSNE1", "TSNE2"]].values[0]
         for n in info["neighbors"]:
             obsname = n["metadata"]["OBSNAME"]
             if obsname in tsne_df["OBSNAME"].values:
@@ -285,62 +273,43 @@ def cached_fit_brt(X_train, y_train, n_trees, learning_rate, max_depth, random_s
 
 
 def show_tab(
-    train_climate_file,
-    train_proxy_file,
-    test_proxy_file,
-    taxa_mask_file,
+    X_train,
+    X_test,
+    y_train,
+    train_metadata,
+    test_metadata,
+    ages_or_depths,
+    obs_names,
+    shared_cols,
     model_flags,
-    target,
-    n_neighbors,
-    brt_trees,
-    rf_trees,
-    cv_folds,
-    random_seed,
     axis,
 ):
-
-    model_flags = ["MAT", "BRT", "RF"]
-
     st.header("Predictions & Model Visualizations")
-
-    # --- Load Data ---
-    loader = ProxyDataLoader(
-        climate_file=train_climate_file,
-        proxy_file=train_proxy_file,
-        test_file=test_proxy_file,
-        mask_file=taxa_mask_file,
-    )
-
-    X_train, y_train, obs_names = loader.load_training_data(target)
-    X_test, ages_or_depths = loader.load_test_data(age_or_depth=axis)
-    X_train_aligned, X_test_aligned, shared_cols = loader.align_taxa(X_train, X_test)
 
     predictions_dict = {}
 
     if "MAT" in model_flags:
-        mat_model = cached_fit_mat(
-            X_train_aligned, y_train, st.session_state.get("n_neighbors", None)
-        )
-        predictions_dict["MAT"] = mat_model.predict(X_test_aligned)
+        mat_model = cached_fit_mat(X_train, y_train, st.session_state.get("n_neighbors", None))
+        predictions_dict["MAT"] = mat_model.predict(X_test)
     if "RF" in model_flags:
         rf_model = cached_fit_rf(
-            X_train_aligned,
+            X_train,
             y_train,
-            X_test_aligned,
+            X_test,
             st.session_state.get("rf_trees", None),
             st.session_state.get("random_seed", None),
         )
-        predictions_dict["RF"] = rf_model.predict(X_test_aligned)
+        predictions_dict["RF"] = rf_model.predict(X_test)
     if "BRT" in model_flags:
         brt_model = cached_fit_brt(
-            X_train_aligned,
+            X_train,
             y_train,
             st.session_state.get("brt_trees", None),
             st.session_state.get("brt_learning_rate", None),
             st.session_state.get("brt_max_depth", None),
             st.session_state.get("random_seed", None),
         )
-        predictions_dict["BRT"] = brt_model.predict(X_test_aligned)
+        predictions_dict["BRT"] = brt_model.predict(X_test)
 
     # --- Combine Predictions ---
     df_preds = pd.DataFrame(predictions_dict)
@@ -353,13 +322,9 @@ def show_tab(
 
     with predictions_plot_expander:
         # --- Gaussian Smoothing ---
-        smoothing_sigma = st.slider(
-            "Gaussian smoothing (σ)", 0.0, 10.0, 2.0, 0.1, key="smoothing_sigma"
-        )
+        smoothing_sigma = st.slider("Gaussian smoothing (σ)", 0.0, 10.0, 2.0, 0.1, key="smoothing_sigma")
         if smoothing_sigma > 0:
-            smoothed_df = df_plot.apply(
-                lambda col: gaussian_filter1d(col, sigma=smoothing_sigma)
-            )
+            smoothed_df = df_plot.apply(lambda col: gaussian_filter1d(col, sigma=smoothing_sigma))
             smoothed_df = smoothed_df.add_suffix("_smoothed")
             df_plot_combined = pd.concat([df_plot, smoothed_df], axis=1).reset_index()
         else:
@@ -379,17 +344,10 @@ def show_tab(
     if "MAT" in model_flags:
         st.subheader("MAT Nearest Neighbors Explorer (t-SNE Space)")
 
-        tsne_coords = compute_mat_tsne(X_train_aligned, X_test_aligned)
-
-        # Load training metadata for tooltips
-        train_climate_file.seek(0)
-        train_metadata = pd.read_csv(train_climate_file, encoding="latin1")
-        test_metadata = pd.DataFrame(
-            {"OBSNAME": [f"{axis}: {val}" for val in ages_or_depths]}
-        )
+        tsne_coords = compute_mat_tsne(X_train, X_test)
 
         neighbors_info = mat_model.get_neighbors_info(
-            X_test_aligned.values,
+            X_test.values,
             metadata_df=train_metadata,
             return_distance=True,
         )
@@ -401,7 +359,7 @@ def show_tab(
             ground_truth=y_train,
             predictions=predictions_dict["MAT"],
             neighbors_info=neighbors_info,
-            target=target,
+            target=st.session_state["target"],
         )
 
         plot_mat_tsne(combined_df, links_df)
@@ -417,18 +375,16 @@ def show_tab(
         st.subheader(f"Trees Feature Importance Visualization")
         col1, col2 = st.columns(2)
         with col1:
-            feature_importance_plot(rf_model, "Random Forest", X_train_aligned)
+            feature_importance_plot(rf_model, "Random Forest", X_train)
         with col2:
-            feature_importance_plot(
-                brt_model, "Boosted Regression Trees", X_train_aligned
-            )
+            feature_importance_plot(brt_model, "Boosted Regression Trees", X_train)
 
     elif "RF" in model_flags:
         st.subheader(f"Trees Feature Importance Visualization")
-        feature_importance_plot(rf_model, "Random Forest", X_train_aligned)
+        feature_importance_plot(rf_model, "Random Forest", X_train)
     elif "BRT" in model_flags:
         st.subheader(f"Trees Feature Importance Visualization")
-        feature_importance_plot(brt_model, "Boosted Regression Trees", X_train_aligned)
+        feature_importance_plot(brt_model, "Boosted Regression Trees", X_train)
 
     if "RF" or "BRT" in model_flags:
         st.info(

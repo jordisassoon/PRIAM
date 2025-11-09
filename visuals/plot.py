@@ -24,9 +24,7 @@ from scipy.ndimage import gaussian_filter1d
     type=click.Path(),
     help="Path to save the visualization image",
 )
-@click.option(
-    "--title", default="Pollen-based Reconstruction", help="Title of the plot"
-)
+@click.option("--title", default="Pollen-based Reconstruction", help="Title of the plot")
 @click.option(
     "--smooth_sigma",
     default=2.0,

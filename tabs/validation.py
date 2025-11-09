@@ -144,9 +144,7 @@ def show_tab(
 
         # Store errors for histogram
         for rmse, mae, bias in zip(scores["rmse"], scores["mae"], scores["bias"]):
-            error_metrics_list.append(
-                {"Model": name, "RMSE": rmse, "MAE": mae, "Bias": bias}
-            )
+            error_metrics_list.append({"Model": name, "RMSE": rmse, "MAE": mae, "Bias": bias})
 
     # --- Display full metrics table ---
     st.subheader("Summary of Cross-validation Metrics")
@@ -188,9 +186,7 @@ def show_tab(
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    st.info(
-        "Note: R², KGE, and Pearson R values are shifted for visualization purposes."
-    )
+    st.info("Note: R², KGE, and Pearson R values are shifted for visualization purposes.")
 
     # --- Prepare simple mean values per metric ---
     # Convert to DataFrame
@@ -262,9 +258,7 @@ def show_tab(
                 params = base_params.copy()
                 params[param_name] = val
 
-                with st.spinner(
-                    f"Running {cv_folds}-fold CV with {param_name}={val}..."
-                ):
+                with st.spinner(f"Running {cv_folds}-fold CV with {param_name}={val}..."):
                     scores = run_grouped_cv(
                         model_class,
                         params,

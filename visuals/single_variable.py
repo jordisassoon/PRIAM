@@ -7,9 +7,7 @@ import click
 @click.command()
 @click.argument("climate_file", type=click.Path(exists=True))
 @click.option("--var", required=True, help="Climate variable to plot")
-@click.option(
-    "--output-file", default="climate_histogram.png", help="Output image file"
-)
+@click.option("--output-file", default="climate_histogram.png", help="Output image file")
 def main(climate_file, var, output_file):
     """Plot a histogram of a single climate variable."""
 

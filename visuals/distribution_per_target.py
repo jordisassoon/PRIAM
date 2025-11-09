@@ -15,9 +15,7 @@ import click
 )
 @click.option("--taxa", required=True, help="Taxa column to plot")
 @click.option("--bins", default=5, help="Number of bins for target variable")
-@click.option(
-    "--output-file", default="pollen_preference.png", help="Output image file"
-)
+@click.option("--output-file", default="pollen_preference.png", help="Output image file")
 def main(pollen_file, climate_file, id_col, target_col, taxa, bins, output_file):
     """Plot a bar chart of taxa preference per binned target climate variable."""
 

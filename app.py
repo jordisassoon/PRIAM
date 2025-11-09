@@ -38,11 +38,15 @@ model_expander = st.sidebar.expander("Model Configuration", expanded=False)
 
 with model_expander:
     # --- Sidebar: Model Configuration ---
-    model_choice = st.selectbox(
-        "Choose Model",
-        st.session_state.get("model_choices", []),
-        key="model_choice",
-    )
+    st.toggle("MAT", value=True, key="use_mat")
+    st.toggle("BRT", value=False, key="use_brt")
+    st.toggle("RF", value=False, key="use_rf")
+
+    model_flags = {
+        "MAT": st.session_state.get("use_mat", False),
+        "BRT": st.session_state.get("use_brt", False),
+        "RF": st.session_state.get("use_rf", False),
+    }
 
     # Target depends on uploaded climate file
     target = st.selectbox(
@@ -55,14 +59,10 @@ with model_expander:
     brt_trees = st.slider("BRT Trees", 1, 1000, key="brt_trees")
     rf_trees = st.slider("RF Trees", 1, 1000, key="rf_trees")
     cv_folds = st.slider("CV Folds", 1, 10, key="cv_folds")
-    random_seed = st.number_input(
-        "Random Seed", value=st.session_state["random_seed"], key="random_seed"
-    )
+    random_seed = st.number_input("Random Seed", value=st.session_state["random_seed"], key="random_seed")
 
     # --- Toggle for Predictions Representation ---
-    prediction_axis = st.radio(
-        "Show Predictions By:", ["Age", "Depth"], key="prediction_axis"
-    )
+    prediction_axis = st.radio("Show Predictions By:", ["Age", "Depth"], key="prediction_axis")
 
     taxa_expander = st.expander("Select Taxa", expanded=False)
     with taxa_expander:
@@ -98,11 +98,7 @@ with data_expander:
         update_state("taxa_mask_file", taxa_mask_file)
         update_state("coords_file", coords_file)
 
-if (
-    train_climate_file is not None
-    and train_proxy_file is not None
-    and test_proxy_file is not None
-):
+if train_climate_file is not None and train_proxy_file is not None and test_proxy_file is not None:
     # --- Load Data ---
     loader = ProxyDataLoader(
         climate_file=train_climate_file,
@@ -114,6 +110,9 @@ if (
     X_train, y_train, obs_names = loader.load_training_data(target)
     X_test, ages_or_depths = loader.load_test_data(age_or_depth=prediction_axis)
     X_train_aligned, X_test_aligned, shared_cols = loader.align_taxa(X_train, X_test)
+
+    train_metadata = obs_names
+    test_metadata = pd.DataFrame({"OBSNAME": [f"{prediction_axis}: {val}" for val in ages_or_depths]})
 
     # --- Taxa selection expander ---
     if shared_cols is not None and len(shared_cols) > 0:
@@ -128,14 +127,10 @@ if (
                             value=st.session_state["taxa_cols"].get(taxa, False),
                         )  # default checked
                     else:
-                        taxa_selection[taxa] = st.checkbox(
-                            taxa, value=True
-                        )  # default checked
+                        taxa_selection[taxa] = st.checkbox(taxa, value=True)  # default checked
 
                 # Filter columns based on selections
-                selected_taxa = [
-                    taxa for taxa, include in taxa_selection.items() if include
-                ]
+                selected_taxa = [taxa for taxa, include in taxa_selection.items() if include]
 
                 if len(selected_taxa) == 0:
                     st.warning("No taxa selected. Predictions will fail.")
@@ -144,12 +139,17 @@ if (
                     X_train_aligned = X_train_aligned[selected_taxa]
                     X_test_aligned = X_test_aligned[selected_taxa]
 
-                st.session_state["taxa_cols"] = {
-                    taxa: True for taxa in selected_taxa
-                }  # Update selected taxa
-                st.session_state["taxa_cols"].update(
-                    {taxa: False for taxa in shared_cols if taxa not in selected_taxa}
-                )
+                st.session_state["taxa_cols"] = {taxa: True for taxa in selected_taxa}  # Update selected taxa
+                st.session_state["taxa_cols"].update({taxa: False for taxa in shared_cols if taxa not in selected_taxa})
+else:
+    X_train_aligned = None
+    X_test_aligned = None
+    y_train = None
+    obs_names = None
+    ages_or_depths = None
+    shared_cols = None
+    train_metadata = None
+    test_metadata = None
 
 target_options = get_non_obs_columns(train_climate_file)
 if train_climate_file is not None and target_options:
@@ -166,17 +166,15 @@ tab_selection = st.segmented_control(
 
 if tab_selection == "Predictions":
     predictions.show_tab(
-        train_climate_file,
-        train_proxy_file,
-        test_proxy_file,
-        taxa_mask_file,
-        model_choice,
-        target,
-        n_neighbors,
-        brt_trees,
-        rf_trees,
-        1,
-        random_seed,
+        X_train=X_train_aligned,
+        X_test=X_test_aligned,
+        y_train=y_train,
+        train_metadata=pd.DataFrame(obs_names),
+        test_metadata=test_metadata,
+        ages_or_depths=ages_or_depths,
+        obs_names=obs_names,
+        shared_cols=shared_cols,
+        model_flags=model_flags,
         axis=prediction_axis,
     )
 

@@ -132,9 +132,7 @@ class MAT(KNeighborsRegressor):
 
         return np.array(predictions)
 
-    def get_neighbors_info(
-        self, X_query, metadata_df: pd.DataFrame, return_distance=True
-    ):
+    def get_neighbors_info(self, X_query, metadata_df: pd.DataFrame, return_distance=True):
         """
         Retrieve nearest neighbors along with metadata for each query sample.
 

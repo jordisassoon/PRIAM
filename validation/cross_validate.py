@@ -24,9 +24,7 @@ def spearman_score(obs, pred):
     return abs(rho)
 
 
-def run_grouped_cv(
-    model_class, model_params, X, y, groups, n_splits=5, seed=42, loader=None
-):
+def run_grouped_cv(model_class, model_params, X, y, groups, n_splits=5, seed=42, loader=None):
     """
     Run grouped cross-validation (based on site grouping).
     Returns RMSE, MAE, R², r, Spearman, KGE, and Bias across folds.
@@ -40,9 +38,7 @@ def run_grouped_cv(
         [],
     )
 
-    for train_idx, val_idx in loader.grouped_cv_splits(
-        X, y, groups, n_splits=n_splits, seed=seed
-    ):
+    for train_idx, val_idx in loader.grouped_cv_splits(X, y, groups, n_splits=n_splits, seed=seed):
         X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
         y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
 
