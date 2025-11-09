@@ -23,6 +23,101 @@ from utils.colors import color_map
 
 
 @st.cache_data
+def plot_prediction_lines(df_plot_combined, axis_string, mirror_x, model_flags):
+    # --- Prepare Plotly figure for predictions ---
+    fig = go.Figure()
+
+    for col in df_plot_combined.columns:
+        if col == axis_string:
+            continue
+
+        # Determine base model name for color
+        base_name = col.replace("_smoothed", "")
+        color = color_map.get(base_name, "#7f7f7f")  # default gray if not in map
+
+        # Determine line style and name
+        if "_smoothed" in col:
+            line_width = 3
+            dash = "solid"
+            name = f"{base_name} (Smoothed)"
+        else:
+            line_width = 1
+            dash = "dot"
+            name = f"{base_name} (Per Sample)"
+
+        fig.add_trace(
+            go.Scatter(
+                x=df_plot_combined[axis_string],
+                y=df_plot_combined[col],
+                mode="lines+markers",
+                name=name,
+                line=dict(color=color, width=line_width, dash=dash),
+                hovertemplate=f"%{{x}} {axis_string}<br>%{{y}} Prediction<br>Model: {name}<extra></extra>",
+            )
+        )
+
+    # --- Layout ---
+    fig.update_layout(
+        width=800,
+        height=400,
+        legend=dict(
+            x=0.98,  # push legend to the right
+            y=0.98,  # push legend to the top
+            xanchor="right",  # anchor legend box to its right edge
+            yanchor="top",  # anchor legend box to its top edge
+            font=dict(size=12),
+        ),
+        margin=dict(l=0, r=0, t=0, b=0),
+        xaxis_title=axis_string,
+        yaxis_title="Prediction",
+        xaxis=dict(autorange="reversed" if mirror_x else True),  # ✅ Simpler
+        hovermode="x unified",
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def feature_importance_plot(model, model_name, X_train):
+    if hasattr(model, "feature_importances_"):
+        importances = model.feature_importances_ / model.feature_importances_.sum()
+        importances = importances * 100  # convert to percentage
+        feature_names = list(X_train.columns)
+
+        # Create DataFrame
+        importance_df = (
+            pd.DataFrame({"Feature": feature_names, "Importance": importances})
+            .sort_values("Importance", ascending=False)
+            .reset_index(drop=True)
+        )
+        importance_df["Importance"] = importance_df["Importance"].round(
+            2
+        )  # round for better display
+        importance_df = importance_df[importance_df["Importance"] > 0][
+            :25
+        ]  # top 25 features
+
+        # --- Plotly Bar Chart ---
+        fig = px.bar(
+            importance_df,
+            x="Importance",
+            y="Feature",
+            orientation="h",
+            title=f"{model_name}",
+            color="Importance",
+            color_continuous_scale="viridis",
+            height=600,
+        )
+
+        fig.update_layout(
+            yaxis=dict(autorange="reversed"),  # highest importance on top
+            margin=dict(l=100, r=20, t=50, b=50),
+            coloraxis_showscale=False,  # hide colorbar if you want cleaner look
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+@st.cache_data
 def plot_mat_tsne(combined_df, links_df):
     offset = 2
     tsne1_min = combined_df["TSNE1"].min() - offset
@@ -103,7 +198,7 @@ def plot_mat_tsne(combined_df, links_df):
         .interactive()
     )
 
-    return chart
+    st.altair_chart(chart, use_container_width=True)
 
 
 @st.cache_data
@@ -258,7 +353,9 @@ def show_tab(
 
     with predictions_plot_expander:
         # --- Gaussian Smoothing ---
-        smoothing_sigma = st.slider("Gaussian smoothing (σ)", 0.0, 10.0, 2.0, 0.1, key="smoothing_sigma")
+        smoothing_sigma = st.slider(
+            "Gaussian smoothing (σ)", 0.0, 10.0, 2.0, 0.1, key="smoothing_sigma"
+        )
         if smoothing_sigma > 0:
             smoothed_df = df_plot.apply(
                 lambda col: gaussian_filter1d(col, sigma=smoothing_sigma)
@@ -267,61 +364,12 @@ def show_tab(
             df_plot_combined = pd.concat([df_plot, smoothed_df], axis=1).reset_index()
         else:
             df_plot_combined = df_plot.reset_index()
-            
-        #--- Mirror X Axis ---
+
+        # --- Mirror X Axis ---
         mirror_x = st.toggle(f"Mirror {axis} axis", value=False, key="mirror_x")
 
-    # --- Prepare Plotly figure for predictions ---
-    fig = go.Figure()
-
-    for col in df_plot_combined.columns:
-        if col == axis_string:
-            continue
-
-        # Determine base model name for color
-        base_name = col.replace("_smoothed", "")
-        color = color_map.get(base_name, "#7f7f7f")  # default gray if not in map
-
-        # Determine line style and name
-        if "_smoothed" in col:
-            line_width = 3
-            dash = "solid"
-            name = f"{base_name} (Smoothed)"
-        else:
-            line_width = 1
-            dash = "dot"
-            name = f"{base_name} (Per Sample)"
-
-        fig.add_trace(
-            go.Scatter(
-                x=df_plot_combined[axis_string],
-                y=df_plot_combined[col],
-                mode="lines+markers",
-                name=name,
-                line=dict(color=color, width=line_width, dash=dash),
-                hovertemplate=f"%{{x}} {axis_string}<br>%{{y}} Prediction<br>Model: {name}<extra></extra>",
-            )
-        )
-
-    # --- Layout ---
-    fig.update_layout(
-        width=800,
-        height=400,
-        legend=dict(
-            x=0.98,            # push legend to the right
-            y=0.98,            # push legend to the top
-            xanchor="right",   # anchor legend box to its right edge
-            yanchor="top",     # anchor legend box to its top edge
-            font=dict(size=12)
-        ),
-        margin=dict(l=0, r=0, t=0, b=0),
-        xaxis_title=axis_string,
-        yaxis_title="Prediction",
-        xaxis=dict(autorange="reversed" if mirror_x else True),  # ✅ Simpler
-        hovermode="x unified",
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+    # --- Plot Predictions ---
+    plot_prediction_lines(df_plot_combined, axis_string, mirror_x, model_flags)
 
     # --- Show DataFrame in Streamlit ---
     st.subheader("Prediction Data Table")
@@ -356,48 +404,13 @@ def show_tab(
             target=target,
         )
 
-        chart = plot_mat_tsne(combined_df, links_df)
-
-        st.altair_chart(chart, use_container_width=True)
+        plot_mat_tsne(combined_df, links_df)
 
         st.info(
-            "💡 This t-SNE projection shows assemblage composition space. "
+            "This t-SNE projection shows assemblage composition space. "
             "Click a red fossil point to highlight its nearest modern analogues (orange) and connecting lines. "
             "Other points fade out."
         )
-
-    def feature_importance_plot(model, model_name, X_train):
-        if hasattr(model, "feature_importances_"):
-            importances = model.feature_importances_ / model.feature_importances_.sum()
-            importances = np.round(importances, 2)  # round to 2 decimal places
-            feature_names = list(X_train.columns)
-
-            # Create DataFrame
-            importance_df = (
-                pd.DataFrame({"Feature": feature_names, "Importance": importances})
-                .sort_values("Importance", ascending=False)
-                .reset_index(drop=True)
-            )
-
-            # --- Plotly Bar Chart ---
-            fig = px.bar(
-                importance_df,
-                x="Importance",
-                y="Feature",
-                orientation="h",
-                title=f"{model_name}",
-                color="Importance",
-                color_continuous_scale="viridis",
-                height=600,
-            )
-
-            fig.update_layout(
-                yaxis=dict(autorange="reversed"),  # highest importance on top
-                margin=dict(l=100, r=20, t=50, b=50),
-                coloraxis_showscale=False,  # hide colorbar if you want cleaner look
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
 
     # --- RF Tree Visualization ---
     if "RF" and "BRT" in model_flags:
@@ -406,7 +419,10 @@ def show_tab(
         with col1:
             feature_importance_plot(rf_model, "Random Forest", X_train_aligned)
         with col2:
-            feature_importance_plot(brt_model, "Boosted Regression Trees", X_train_aligned)
+            feature_importance_plot(
+                brt_model, "Boosted Regression Trees", X_train_aligned
+            )
+
     elif "RF" in model_flags:
         st.subheader(f"Trees Feature Importance Visualization")
         feature_importance_plot(rf_model, "Random Forest", X_train_aligned)
@@ -414,7 +430,8 @@ def show_tab(
         st.subheader(f"Trees Feature Importance Visualization")
         feature_importance_plot(brt_model, "Boosted Regression Trees", X_train_aligned)
 
-    st.info(
-        "💡 Feature importance plots show the relative contribution (in percentage) of each taxa to the model's predictions. "
-        "Longer bars indicate higher importance."
-    )
+    if "RF" or "BRT" in model_flags:
+        st.info(
+            "Feature importance indicates how much each taxa contributed to the model's predictions. "
+            "Higher importance means the taxa was more influential."
+        )
