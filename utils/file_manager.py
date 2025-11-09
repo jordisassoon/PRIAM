@@ -48,6 +48,7 @@ def load_file(uploaded_file):
         st.error(f"Failed to load uploaded file: {e}")
         return None
 
+
 def make_zip(files_dict: dict, zip_name: str = "data.zip") -> io.BytesIO:
     """Return an in-memory ZIP file from a dict of {filename: BytesIO}."""
     buffer = io.BytesIO()

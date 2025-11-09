@@ -51,7 +51,7 @@ def plot_prediction_lines(df_plot_combined, axis_string, mirror_x):
                 y=df_plot_combined[col],
                 mode="lines+markers",
                 name=name,
-                line=dict(color=color, width=line_width, dash=dash)
+                line=dict(color=color, width=line_width, dash=dash),
             )
         )
 
@@ -198,7 +198,9 @@ def create_mat_tsne_df(
     # Prepare modern dataframe
     tsne_df = pd.DataFrame(tsne_coords, columns=["TSNE1", "TSNE2"])
     tsne_df["Type"] = ["Modern"] * len(train_metadata) + ["Fossil"] * len(test_metadata)
-    tsne_df["OBSNAME"] = list(train_metadata["OBSNAME"]) + list(test_metadata[st.session_state.get("prediction_axis", "Age")])
+    tsne_df["OBSNAME"] = list(train_metadata["OBSNAME"]) + list(
+        test_metadata[st.session_state.get("prediction_axis", "Age")]
+    )
     tsne_df["Predicted"] = list(ground_truth) + list(predictions)
 
     # Build links dataframe
@@ -304,7 +306,7 @@ def show_tab(
 
     # --- Combine Predictions ---
     df_preds = pd.DataFrame(predictions_dict)
-    df_preds = df_preds.join(test_metadata.reset_index(drop=True)) # Join metadata for display
+    df_preds = df_preds.join(test_metadata.reset_index(drop=True))  # Join metadata for display
     axis_string = st.session_state.get("prediction_axis", "Age")
     df_plot = df_preds.set_index(axis_string).sort_index()
 

@@ -95,10 +95,7 @@ with data_expander:
 
         # Download button
         st.download_button(
-            label="Download Dummy Data",
-            data=zip_buffer,
-            file_name="dummy_data.zip",
-            mime="application/zip"
+            label="Download Dummy Data", data=zip_buffer, file_name="dummy_data.zip", mime="application/zip"
         )
     else:
         # --- Sidebar: File Uploads ---
