@@ -32,7 +32,13 @@ def run_grouped_cv(
     Returns RMSE, MAE, R², r, Spearman, KGE, and Bias across folds.
     """
     scores_rmse, scores_mae = [], []
-    scores_r2, scores_r, scores_spearman, scores_kge, scores_bias = [], [], [], [], []
+    scores_r2, scores_r, scores_spearman, scores_kge, scores_bias = (
+        [],
+        [],
+        [],
+        [],
+        [],
+    )
 
     for train_idx, val_idx in loader.grouped_cv_splits(
         X, y, groups, n_splits=n_splits, seed=seed

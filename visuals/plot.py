@@ -28,7 +28,10 @@ from scipy.ndimage import gaussian_filter1d
     "--title", default="Pollen-based Reconstruction", help="Title of the plot"
 )
 @click.option(
-    "--smooth_sigma", default=2.0, type=float, help="Sigma for Gaussian smoothing"
+    "--smooth_sigma",
+    default=2.0,
+    type=float,
+    help="Sigma for Gaussian smoothing",
 )
 def main(predictions_csv, depth_csv, output_file, title, smooth_sigma):
     # Load predictions
@@ -55,7 +58,12 @@ def main(predictions_csv, depth_csv, output_file, title, smooth_sigma):
 
         # Thin jagged line
         plt.plot(
-            depth, pred_col, linestyle="-", color="tab:blue", linewidth=1, alpha=0.5
+            depth,
+            pred_col,
+            linestyle="-",
+            color="tab:blue",
+            linewidth=1,
+            alpha=0.5,
         )
 
         # Smoothed line (apply Gaussian filter column-wise)

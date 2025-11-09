@@ -9,7 +9,9 @@ import click
 @click.argument("climate_file", type=click.Path(exists=True))
 @click.option("--id-col", default="OBSNAME", help="Column name to merge datasets on")
 @click.option(
-    "--target-col", required=True, help="Climate variable column to plot against"
+    "--target-col",
+    required=True,
+    help="Climate variable column to plot against",
 )
 @click.option("--taxa", required=True, help="Taxa column to plot")
 @click.option("--bins", default=5, help="Number of bins for target variable")

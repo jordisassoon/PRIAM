@@ -11,6 +11,8 @@ def get_default_state_config():
         "rf_trees": 200,
         "cv_folds": 3,
         "random_seed": 42,
+        "smoothing_sigma": 2.0,
+        "mirror_x": False,
         "prediction_axis": "Age",
         "initialized": False,
         "uploaded_state": None,

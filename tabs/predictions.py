@@ -23,13 +23,7 @@ from utils.colors import color_map
 
 
 @st.cache_data
-def plot_mat_tsne(
-    modern_coords, fossil_coords, train_metadata, test_metadata, predictions, neighbors_info, target
-):
-    combined_df, links_df = create_mat_tsne_df(
-        modern_coords, fossil_coords, train_metadata, test_metadata, predictions, neighbors_info, target
-    )
-
+def plot_mat_tsne(combined_df, links_df):
     offset = 2
     tsne1_min = combined_df["TSNE1"].min() - offset
     tsne1_max = combined_df["TSNE1"].max() + offset
@@ -55,7 +49,7 @@ def plot_mat_tsne(
                 scale=alt.Scale(domain=(tsne2_min, tsne2_max)),
             ),
             color=alt.Color(
-                "PlotType:N",
+                "Type:N",
                 scale=alt.Scale(
                     domain=["Fossil", "Modern", "Neighbor"],
                     range=["red", "steelblue", "orange"],
@@ -76,7 +70,7 @@ def plot_mat_tsne(
             x="modern_TSNE1:Q",
             y="modern_TSNE2:Q",
             color=alt.Color(
-                "PlotType:N",
+                "Type:N",
                 scale=alt.Scale(
                     domain=["Fossil", "Modern", "Neighbor"],
                     range=["red", "steelblue", "orange"],
@@ -114,59 +108,49 @@ def plot_mat_tsne(
 
 @st.cache_data
 def create_mat_tsne_df(
-    modern_coords, fossil_coords, train_metadata, test_metadata, predictions, neighbors_info, target
+    tsne_coords,
+    train_metadata,
+    test_metadata,
+    ground_truth,
+    predictions,
+    neighbors_info,
+    target,
 ):
     # Prepare modern dataframe
-    modern_df = train_metadata.copy()
-    modern_df["Type"] = "Modern"
-    modern_df["Predicted"] = np.nan
-    modern_df["TSNE1"] = modern_coords[:, 0]
-    modern_df["TSNE2"] = modern_coords[:, 1]
-
-    # Prepare fossil dataframe
-    fossil_df = pd.DataFrame(
-        {
-            "OBSNAME": test_metadata["OBSNAME"],
-            "TSNE1": fossil_coords[:, 0],
-            "TSNE2": fossil_coords[:, 1],
-            "Type": "Fossil",
-            "Predicted": predictions,
-        }
+    tsne_df = pd.DataFrame(tsne_coords, columns=["TSNE1", "TSNE2"])
+    tsne_df["Type"] = ["Modern"] * len(train_metadata) + ["Fossil"] * len(test_metadata)
+    tsne_df["OBSNAME"] = list(train_metadata["OBSNAME"]) + list(
+        test_metadata["OBSNAME"]
     )
-
-    combined_df = pd.concat([modern_df, fossil_df], ignore_index=True)
+    tsne_df["Predicted"] = list(ground_truth) + list(predictions)
 
     # Build links dataframe
     link_rows = []
     for i, info in enumerate(neighbors_info):
-        fossil_name = test_metadata.iloc[i]["OBSNAME"]  # TODO: use actual labels
-        f_tsne1, f_tsne2 = fossil_coords[i]
+        fossil_name = test_metadata.iloc[i]["OBSNAME"]
+        f_tsne1, f_tsne2 = tsne_df.loc[
+            tsne_df["OBSNAME"] == fossil_name, ["TSNE1", "TSNE2"]
+        ].values[0]
         for n in info["neighbors"]:
             obsname = n["metadata"]["OBSNAME"]
-            if obsname in modern_df["OBSNAME"].values:
-                m_row = modern_df.loc[modern_df["OBSNAME"] == obsname].iloc[0]
+            if obsname in tsne_df["OBSNAME"].values:
+                m_row = tsne_df.loc[tsne_df["OBSNAME"] == obsname].iloc[0]
                 link_rows.append(
                     {
-                        "fossil": fossil_name,
+                        "OBSNAME": fossil_name,
                         "neighbor": obsname,
                         "distance": n["distance"],
                         "fossil_TSNE1": f_tsne1,
                         "fossil_TSNE2": f_tsne2,
                         "modern_TSNE1": m_row["TSNE1"],
                         "modern_TSNE2": m_row["TSNE2"],
+                        "Type": "Neighbor",
                     }
                 )
-    
+
     links_df = pd.DataFrame(link_rows)
-    links_df = links_df.rename(columns={"fossil": "OBSNAME"})
 
-    # Define PlotType for fossils/modern
-    combined_df["PlotType"] = combined_df["Type"].apply(
-        lambda t: "Fossil" if t == "Fossil" else "Modern"
-    )
-    links_df["PlotType"] = "Neighbor"
-
-    return combined_df, links_df
+    return tsne_df, links_df
 
 
 @st.cache_data
@@ -174,12 +158,35 @@ def compute_mat_tsne(X_train, X_test):
     """Compute t-SNE coordinates for MAT nearest neighbors visualization."""
     combined = np.vstack([X_train, X_test])
     tsne = TSNE(n_components=2, perplexity=30, random_state=42)
-    coords = tsne.fit_transform(combined)
+    tsne_coords = tsne.fit_transform(combined)
 
-    modern_coords = coords[: len(X_train)]
-    fossil_coords = coords[len(X_train) :]
+    return tsne_coords
 
-    return modern_coords, fossil_coords
+
+@st.cache_data
+def cached_fit_mat(X_train, y_train, n_neighbors):
+    mat_model = MAT(n_neighbors=n_neighbors)
+    mat_model.fit(X_train, y_train)
+    return mat_model
+
+
+@st.cache_data
+def cached_fit_rf(X_train, y_train, X_test, n_trees, random_seed):
+    rf_model = RF(n_estimators=n_trees, random_state=random_seed)
+    rf_model.fit(X_train, y_train)
+    return rf_model
+
+
+@st.cache_data
+def cached_fit_brt(X_train, y_train, n_trees, learning_rate, max_depth, random_seed):
+    brt_model = BRT(
+        n_estimators=n_trees,
+        learning_rate=learning_rate,
+        max_depth=max_depth,
+        random_state=random_seed,
+    )
+    brt_model.fit(X_train, y_train)
+    return brt_model
 
 
 def show_tab(
@@ -187,7 +194,7 @@ def show_tab(
     train_proxy_file,
     test_proxy_file,
     taxa_mask_file,
-    model_choice,
+    model_flags,
     target,
     n_neighbors,
     brt_trees,
@@ -197,27 +204,9 @@ def show_tab(
     axis,
 ):
 
+    model_flags = ["MAT", "BRT", "RF"]
+
     st.header("Predictions & Model Visualizations")
-
-    if not (train_climate_file and train_proxy_file and test_proxy_file):
-        st.warning("Please upload all required files to run predictions.")
-        return
-
-    try:
-        train_climate_file.seek(0)
-    except:
-        st.warning("Please upload the training climate dataset.")
-        return
-    try:
-        train_proxy_file.seek(0)
-    except:
-        st.warning("Please upload the training proxy dataset.")
-        return
-    try:
-        test_proxy_file.seek(0)
-    except:
-        st.warning("Please upload the test proxy dataset.")
-        return
 
     # --- Load Data ---
     loader = ProxyDataLoader(
@@ -231,86 +220,58 @@ def show_tab(
     X_test, ages_or_depths = loader.load_test_data(age_or_depth=axis)
     X_train_aligned, X_test_aligned, shared_cols = loader.align_taxa(X_train, X_test)
 
-    # --- Prepare Models ---
-    available_models = {
-        "MAT": (MAT, {"n_neighbors": n_neighbors}),
-        "BRT": (
-            BRT,
-            {
-                "n_estimators": brt_trees,
-                "learning_rate": 0.05,
-                "max_depth": 6,
-                "random_state": random_seed,
-            },
-        ),
-        # "WAPLS": (WAPLS, {"n_components": 5, "weighted": True}),
-        "RF": (
-            RF,
-            {"n_estimators": rf_trees, "max_depth": 6, "random_state": random_seed},
-        ),
-    }
-
-    if model_choice == "All":
-        models_to_run = available_models
-    else:
-        models_to_run = {model_choice: available_models[model_choice]}
-
     predictions_dict = {}
-    metrics_display = []
 
-    # --- Run Models ---
-    for name, (model_class, params) in models_to_run.items():
-        model = model_class(**params)
-
-        # Cross-validation
-        if cv_folds > 1:
-            st.write(f"Running {cv_folds}-fold CV for {name}...")
-            scores = run_grouped_cv(
-                model_class,
-                params,
-                X_train_aligned,
-                y_train,
-                obs_names,
-                n_splits=cv_folds,
-                seed=random_seed,
-                loader=loader,
-            )
-            metrics_display.append(
-                {
-                    "Model": name,
-                    "RMSE": f"{np.mean(scores['rmse']):.3f} ± {np.std(scores['rmse']):.3f}",
-                    "R²": f"{np.mean(scores['r2']):.3f} ± {np.std(scores['r2']):.3f}",
-                }
-            )
-
-        # Train on full dataset
-        model.fit(X_train_aligned, y_train)
-        predictions_dict[name] = model.predict(X_test_aligned)
-        if name == "MAT":
-            mat_model = model
-        if name == "RF":
-            brt_model = model
-
-    axis_string = f"{axis}"
+    if "MAT" in model_flags:
+        mat_model = cached_fit_mat(
+            X_train_aligned, y_train, st.session_state.get("n_neighbors", None)
+        )
+        predictions_dict["MAT"] = mat_model.predict(X_test_aligned)
+    if "RF" in model_flags:
+        rf_model = cached_fit_rf(
+            X_train_aligned,
+            y_train,
+            X_test_aligned,
+            st.session_state.get("rf_trees", None),
+            st.session_state.get("random_seed", None),
+        )
+        predictions_dict["RF"] = rf_model.predict(X_test_aligned)
+    if "BRT" in model_flags:
+        brt_model = cached_fit_brt(
+            X_train_aligned,
+            y_train,
+            st.session_state.get("brt_trees", None),
+            st.session_state.get("brt_learning_rate", None),
+            st.session_state.get("brt_max_depth", None),
+            st.session_state.get("random_seed", None),
+        )
+        predictions_dict["BRT"] = brt_model.predict(X_test_aligned)
 
     # --- Combine Predictions ---
-    df_preds = pd.DataFrame({axis_string: ages_or_depths.values})
-    for name, preds in predictions_dict.items():
-        df_preds[f"{name}"] = preds
+    df_preds = pd.DataFrame(predictions_dict)
+    axis_string = f"{axis}"
+    df_preds[axis_string] = ages_or_depths.values
     df_plot = df_preds.set_index(axis_string)
 
-    # --- Gaussian Smoothing ---
-    smoothing_sigma = st.slider("Gaussian smoothing (σ)", 0.0, 10.0, 2.0, 0.1)
-    if smoothing_sigma > 0:
-        smoothed_df = df_plot.apply(
-            lambda col: gaussian_filter1d(col, sigma=smoothing_sigma)
-        )
-        smoothed_df = smoothed_df.add_suffix("_smoothed")
-        df_plot_combined = pd.concat([df_plot, smoothed_df], axis=1).reset_index()
-    else:
-        df_plot_combined = df_plot.reset_index()
+    # --- Layout for Plot and Controls ---
+    predictions_plot_expander = st.expander("Prediction Plot Settings", expanded=False)
 
-    # --- Prepare Plotly figure ---
+    with predictions_plot_expander:
+        # --- Gaussian Smoothing ---
+        smoothing_sigma = st.slider("Gaussian smoothing (σ)", 0.0, 10.0, 2.0, 0.1, key="smoothing_sigma")
+        if smoothing_sigma > 0:
+            smoothed_df = df_plot.apply(
+                lambda col: gaussian_filter1d(col, sigma=smoothing_sigma)
+            )
+            smoothed_df = smoothed_df.add_suffix("_smoothed")
+            df_plot_combined = pd.concat([df_plot, smoothed_df], axis=1).reset_index()
+        else:
+            df_plot_combined = df_plot.reset_index()
+            
+        #--- Mirror X Axis ---
+        mirror_x = st.toggle(f"Mirror {axis} axis", value=False, key="mirror_x")
+
+    # --- Prepare Plotly figure for predictions ---
     fig = go.Figure()
 
     for col in df_plot_combined.columns:
@@ -342,14 +303,18 @@ def show_tab(
             )
         )
 
-    # --- Toggle for mirroring X axis ---
-    mirror_x = st.checkbox(f"Mirror {axis} axis", value=False)
-
     # --- Layout ---
     fig.update_layout(
-        width=900,
-        height=500,
-        margin=dict(l=60, r=20, t=50, b=80),
+        width=800,
+        height=400,
+        legend=dict(
+            x=0.98,            # push legend to the right
+            y=0.98,            # push legend to the top
+            xanchor="right",   # anchor legend box to its right edge
+            yanchor="top",     # anchor legend box to its top edge
+            font=dict(size=12)
+        ),
+        margin=dict(l=0, r=0, t=0, b=0),
         xaxis_title=axis_string,
         yaxis_title="Prediction",
         xaxis=dict(autorange="reversed" if mirror_x else True),  # ✅ Simpler
@@ -363,34 +328,35 @@ def show_tab(
     st.dataframe(df_preds)  # 👈 Interactive table
 
     # === MAT Interactive Nearest Neighbors (t-SNE Space) ===
-    if model_choice == "MAT" or model_choice == "All":
-        if model_choice == "All":
-            mat_model = mat_model
-        else:
-            mat_model = model
-
+    if "MAT" in model_flags:
         st.subheader("MAT Nearest Neighbors Explorer (t-SNE Space)")
 
-        modern_coords, fossil_coords = compute_mat_tsne(X_train_aligned, X_test_aligned)
+        tsne_coords = compute_mat_tsne(X_train_aligned, X_test_aligned)
 
         # Load training metadata for tooltips
         train_climate_file.seek(0)
         train_metadata = pd.read_csv(train_climate_file, encoding="latin1")
-        test_metadata = pd.DataFrame({"OBSNAME": [f"{axis}: {val}" for val in ages_or_depths]})
-
-        neighbors_info = mat_model.get_neighbors_info(X_test_aligned.values, 
-            metadata_df=train_metadata, return_distance=True
+        test_metadata = pd.DataFrame(
+            {"OBSNAME": [f"{axis}: {val}" for val in ages_or_depths]}
         )
-        
-        chart = plot_mat_tsne(
-            modern_coords=modern_coords,
-            fossil_coords=fossil_coords,
+
+        neighbors_info = mat_model.get_neighbors_info(
+            X_test_aligned.values,
+            metadata_df=train_metadata,
+            return_distance=True,
+        )
+
+        combined_df, links_df = create_mat_tsne_df(
+            tsne_coords=tsne_coords,
             train_metadata=train_metadata,
             test_metadata=test_metadata,
+            ground_truth=y_train,
             predictions=predictions_dict["MAT"],
             neighbors_info=neighbors_info,
             target=target,
         )
+
+        chart = plot_mat_tsne(combined_df, links_df)
 
         st.altair_chart(chart, use_container_width=True)
 
@@ -400,90 +366,55 @@ def show_tab(
             "Other points fade out."
         )
 
+    def feature_importance_plot(model, model_name, X_train):
+        if hasattr(model, "feature_importances_"):
+            importances = model.feature_importances_ / model.feature_importances_.sum()
+            importances = np.round(importances, 2)  # round to 2 decimal places
+            feature_names = list(X_train.columns)
+
+            # Create DataFrame
+            importance_df = (
+                pd.DataFrame({"Feature": feature_names, "Importance": importances})
+                .sort_values("Importance", ascending=False)
+                .reset_index(drop=True)
+            )
+
+            # --- Plotly Bar Chart ---
+            fig = px.bar(
+                importance_df,
+                x="Importance",
+                y="Feature",
+                orientation="h",
+                title=f"{model_name}",
+                color="Importance",
+                color_continuous_scale="viridis",
+                height=600,
+            )
+
+            fig.update_layout(
+                yaxis=dict(autorange="reversed"),  # highest importance on top
+                margin=dict(l=100, r=20, t=50, b=50),
+                coloraxis_showscale=False,  # hide colorbar if you want cleaner look
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
     # --- RF Tree Visualization ---
-    if model_choice in ["RF", "All"]:
-        if model_choice == "All":
-            rf_model = model
-        else:
-            rf_model = model
+    if "RF" and "BRT" in model_flags:
+        st.subheader(f"Trees Feature Importance Visualization")
+        col1, col2 = st.columns(2)
+        with col1:
+            feature_importance_plot(rf_model, "Random Forest", X_train_aligned)
+        with col2:
+            feature_importance_plot(brt_model, "Boosted Regression Trees", X_train_aligned)
+    elif "RF" in model_flags:
+        st.subheader(f"Trees Feature Importance Visualization")
+        feature_importance_plot(rf_model, "Random Forest", X_train_aligned)
+    elif "BRT" in model_flags:
+        st.subheader(f"Trees Feature Importance Visualization")
+        feature_importance_plot(brt_model, "Boosted Regression Trees", X_train_aligned)
 
-        st.subheader(f"RF Model Visualization")
-
-        # --- Feature Importances ---
-        if hasattr(rf_model, "feature_importances_"):
-            st.markdown("### 🔍 Feature Importance")
-
-            importances = rf_model.feature_importances_
-            feature_names = list(X_train_aligned.columns)
-
-            # Create DataFrame
-            importance_df = (
-                pd.DataFrame({"Feature": feature_names, "Importance": importances})
-                .sort_values("Importance", ascending=False)
-                .reset_index(drop=True)
-            )
-
-            # --- Plotly Bar Chart ---
-            fig = px.bar(
-                importance_df,
-                x="Importance",
-                y="Feature",
-                orientation="h",
-                title="Feature Importance (Mean Decrease in Impurity)",
-                color="Importance",
-                color_continuous_scale="viridis",
-                height=600,
-            )
-
-            fig.update_layout(
-                yaxis=dict(autorange="reversed"),  # highest importance on top
-                margin=dict(l=100, r=20, t=50, b=50),
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
-
-    # --- BRT Tree Visualization ---
-    if model_choice in ["BRT", "All"]:
-        if model_choice == "All":
-            brt_model = model
-        else:
-            brt_model = model
-
-        st.subheader(f"BRT Model Visualization")
-
-        # --- Feature Importances ---
-        if hasattr(brt_model, "feature_importances_"):
-            st.markdown("### 🔍 Feature Importance")
-
-            # For LightGBM, you can choose 'split' or 'gain'
-            importances = (
-                brt_model.feature_importances_
-            )  # default is 'split', use brt_model.feature_importance(importance_type='gain') if needed
-
-            feature_names = list(X_train_aligned.columns)
-
-            # Create DataFrame
-            importance_df = (
-                pd.DataFrame({"Feature": feature_names, "Importance": importances})
-                .sort_values("Importance", ascending=False)
-                .reset_index(drop=True)
-            )
-
-            # --- Plotly Bar Chart ---
-            fig = px.bar(
-                importance_df,
-                x="Importance",
-                y="Feature",
-                orientation="h",
-                title="Feature Importance (LightGBM)",
-                color="Importance",
-                color_continuous_scale="viridis",
-                height=600,
-            )
-
-            fig.update_layout(
-                yaxis=dict(autorange="reversed"),  # highest importance on top
-                margin=dict(l=100, r=20, t=50, b=50),
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
+    st.info(
+        "💡 Feature importance plots show the relative contribution (in percentage) of each taxa to the model's predictions. "
+        "Longer bars indicate higher importance."
+    )

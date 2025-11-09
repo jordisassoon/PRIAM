@@ -12,10 +12,18 @@ import branca.colormap as cm
 @click.option("--lon-col", default="LONG", help="Column name for longitude")
 @click.option("--alt-col", default="ALTI", help="Column name for altitude")
 @click.option(
-    "--output-html", default="map.html", help="Output HTML file for interactive map"
+    "--output-html",
+    default="map.html",
+    help="Output HTML file for interactive map",
 )
 def main(
-    pollen_file, coords_file, sample_id_col, lat_col, lon_col, alt_col, output_html
+    pollen_file,
+    coords_file,
+    sample_id_col,
+    lat_col,
+    lon_col,
+    alt_col,
+    output_html,
 ):
     """Load pollen and coordinate CSVs, merge them, and plot locations on an interactive map with altitude color scale."""
 

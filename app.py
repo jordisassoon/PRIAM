@@ -3,8 +3,16 @@ import io
 import yaml
 import pandas as pd
 
-from utils.page_loader import set_page_config, set_sidebar_logo, remove_top_padding
-from utils.state_manager import initialize_state, load_state_from_yaml, update_state
+from utils.page_loader import (
+    set_page_config,
+    set_sidebar_logo,
+    remove_top_padding,
+)
+from utils.state_manager import (
+    initialize_state,
+    load_state_from_yaml,
+    update_state,
+)
 from utils.file_manager import load_dummy_file, get_non_obs_columns
 from utils.defaults import get_default_state_config
 from tabs import predictions, data_exploration, validation
@@ -31,12 +39,16 @@ model_expander = st.sidebar.expander("Model Configuration", expanded=False)
 with model_expander:
     # --- Sidebar: Model Configuration ---
     model_choice = st.selectbox(
-        "Choose Model", st.session_state.get("model_choices", []), key="model_choice"
+        "Choose Model",
+        st.session_state.get("model_choices", []),
+        key="model_choice",
     )
 
     # Target depends on uploaded climate file
     target = st.selectbox(
-        "Target Climate Variable", st.session_state.get("target_cols", []), key="target"
+        "Target Climate Variable",
+        st.session_state.get("target_cols", []),
+        key="target",
     )
 
     n_neighbors = st.slider("MAT Neighbors", 1, 20, key="n_neighbors")
@@ -112,7 +124,8 @@ if (
                 for taxa in shared_cols:
                     if taxa in st.session_state.get("taxa_cols", {}).keys():
                         taxa_selection[taxa] = st.checkbox(
-                            taxa, value=st.session_state["taxa_cols"].get(taxa, False)
+                            taxa,
+                            value=st.session_state["taxa_cols"].get(taxa, False),
                         )  # default checked
                     else:
                         taxa_selection[taxa] = st.checkbox(

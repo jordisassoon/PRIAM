@@ -45,7 +45,10 @@ def read_csv_auto_delimiter(uploaded_file, encoding_list=None):
     for enc in encoding_list:
         try:
             df = pd.read_csv(
-                StringIO(content), delimiter=delimiter, encoding=enc, engine="python"
+                StringIO(content),
+                delimiter=delimiter,
+                encoding=enc,
+                engine="python",
             )
             if df.shape[1] > 0:  # at least one column
                 return df

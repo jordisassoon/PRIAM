@@ -129,11 +129,17 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
     col1, col2 = st.columns(2)
     with col1:
         x_var = st.selectbox(
-            "X-axis climate variable", climate_options, key="x_var_only", index=0
+            "X-axis climate variable",
+            climate_options,
+            key="x_var_only",
+            index=0,
         )
     with col2:
         y_var = st.selectbox(
-            "Y-axis climate variable", climate_options, key="y_var_only", index=1
+            "Y-axis climate variable",
+            climate_options,
+            key="y_var_only",
+            index=1,
         )
 
     if x_var not in climate_df.columns or y_var not in climate_df.columns:
@@ -149,10 +155,14 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
             .mark_circle(size=60, opacity=0.7)
             .encode(
                 x=alt.X(
-                    f"{x_var}:Q", title=x_var, scale=alt.Scale(domain=(x_min, x_max))
+                    f"{x_var}:Q",
+                    title=x_var,
+                    scale=alt.Scale(domain=(x_min, x_max)),
                 ),
                 y=alt.Y(
-                    f"{y_var}:Q", title=y_var, scale=alt.Scale(domain=(y_min, y_max))
+                    f"{y_var}:Q",
+                    title=y_var,
+                    scale=alt.Scale(domain=(y_min, y_max)),
                 ),
                 tooltip=[
                     alt.Tooltip("Type:N"),
@@ -238,7 +248,10 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
         st.metric("Mean likelihood (PCA-KDE)", f"{np.mean(probs_norm):.3f}")
 
         kde_df = pd.DataFrame(
-            {"Test Sample": np.arange(len(probs_norm)), "Probability": probs_norm}
+            {
+                "Test Sample": np.arange(len(probs_norm)),
+                "Probability": probs_norm,
+            }
         )
         kde_df["Sample"] = test_labels
         fig = px.bar(
@@ -249,7 +262,8 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
             title="Test Sample Likelihood (PCA-KDE)",
         )
         fig.update_layout(
-            yaxis_title="Normalized Probability", xaxis_title="Test Sample Index"
+            yaxis_title="Normalized Probability",
+            xaxis_title="Test Sample Index",
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -303,5 +317,8 @@ def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file,
 
     with open(map_path, "rb") as f:
         st.download_button(
-            "Download Map HTML", f, file_name="map_output.html", mime="text/html"
+            "Download Map HTML",
+            f,
+            file_name="map_output.html",
+            mime="text/html",
         )

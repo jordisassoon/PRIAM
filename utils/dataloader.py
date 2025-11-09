@@ -8,7 +8,11 @@ from utils.csv_loader import read_csv_auto_delimiter
 
 class ProxyDataLoader:
     def __init__(
-        self, climate_file: str, proxy_file: str, test_file: str, mask_file: str = None
+        self,
+        climate_file: str,
+        proxy_file: str,
+        test_file: str,
+        mask_file: str = None,
     ):
         self.climate_file = climate_file
         self.proxy_file = proxy_file

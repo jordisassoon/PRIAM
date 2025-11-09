@@ -84,7 +84,11 @@ def show_tab(
         ),
         "RF": (
             RF,
-            {"n_estimators": rf_trees, "max_depth": 6, "random_state": random_seed},
+            {
+                "n_estimators": rf_trees,
+                "max_depth": 6,
+                "random_state": random_seed,
+            },
         ),
     }
 
@@ -228,7 +232,10 @@ def show_tab(
 
         # Define parameter ranges for each model
         param_ranges = {
-            "MAT": {"param_name": "n_neighbors", "values": [1, 2, 3, 4, 5, 6, 7]},
+            "MAT": {
+                "param_name": "n_neighbors",
+                "values": [1, 2, 3, 4, 5, 6, 7],
+            },
             "RF": {
                 "param_name": "n_estimators",
                 "values": [1, 10, 50, 100, 200, 300, 500, 700, 1000],
