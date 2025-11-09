@@ -93,6 +93,7 @@ def feature_importance_plot(model, model_name, X_train):
             title=f"{model_name}",
             color="Importance",
             color_continuous_scale="viridis",
+            range_color=[0, 100],
             height=600,
         )
 
@@ -101,6 +102,8 @@ def feature_importance_plot(model, model_name, X_train):
             margin=dict(l=100, r=20, t=50, b=50),
             coloraxis_showscale=False,  # hide colorbar if you want cleaner look
         )
+        
+        fig.update_xaxes(range=[0, 100])
 
         st.plotly_chart(fig, use_container_width=True)
 
