@@ -55,10 +55,13 @@ with model_expander:
         key="target",
     )
 
-    n_neighbors = st.slider("MAT Neighbors", 1, 20, key="n_neighbors")
-    brt_trees = st.slider("BRT Trees", 1, 1000, key="brt_trees")
-    rf_trees = st.slider("RF Trees", 1, 1000, key="rf_trees")
-    cv_folds = st.slider("CV Folds", 1, 10, key="cv_folds")
+    if st.session_state["use_mat"]:
+        n_neighbors = st.number_input("MAT Neighbors", 1, 20, value=st.session_state["n_neighbors"], key="n_neighbors")
+    if st.session_state["use_brt"]:
+        brt_trees = st.number_input("BRT Trees", 1, 1000, value=st.session_state["brt_trees"], key="brt_trees")
+    if st.session_state["use_rf"]:
+        rf_trees = st.number_input("RF Trees", 1, 1000, value=st.session_state["rf_trees"], key="rf_trees")
+    cv_folds = st.number_input("CV Folds", 1, 10, value=st.session_state["cv_folds"], key="cv_folds")
     random_seed = st.number_input("Random Seed", value=st.session_state["random_seed"], key="random_seed")
 
     # --- Toggle for Predictions Representation ---
@@ -84,6 +87,8 @@ with data_expander:
         test_proxy_file = load_dummy_file("./data/synthetic_test_data.csv")
         taxa_mask_file = None
         coords_file = load_dummy_file("./data/synthetic_coords_data.csv")
+
+        # TODO: button for downloading dummy data files
     else:
         # --- Sidebar: File Uploads ---
         train_climate_file = st.file_uploader("Training Climate CSV", type=["csv"])
@@ -141,6 +146,7 @@ if train_climate_file is not None and train_proxy_file is not None and test_prox
 
                 st.session_state["taxa_cols"] = {taxa: True for taxa in selected_taxa}  # Update selected taxa
                 st.session_state["taxa_cols"].update({taxa: False for taxa in shared_cols if taxa not in selected_taxa})
+    # TODO: update shared_cols
 else:
     X_train_aligned = None
     X_test_aligned = None

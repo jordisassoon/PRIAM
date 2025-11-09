@@ -159,10 +159,6 @@ def show_tab(
     df_norm = metrics_df[["Pearson R", "R²", "Spearman", "KGE"]].fillna(0.0)
     categories = list(df_norm.columns)
 
-    # df_norm["R²"] = df_norm["R²"] + 1.0 / 2  # shift R² to [0, 1] for better visibility
-    # df_norm["KGE"] = (df_norm["KGE"] + 1.0) / 2  # shift KGE to [0, 1]
-    # df_norm["Pearson R"] = (df_norm["Pearson R"] + 1.0) / 2  # shift R to [0, 1]
-
     fig = go.Figure()
     for model in df_norm.index:
         values = df_norm.loc[model].tolist()

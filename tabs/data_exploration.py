@@ -14,10 +14,6 @@ import shutil
 
 from utils.map_utils import generate_map
 
-# ======================
-# 🔹 CACHING UTILITIES
-# ======================
-
 
 @st.cache_data
 def hellinger_transform(df):
@@ -75,7 +71,7 @@ def compute_pca_kde(X_train, X_test, bandwidth=0.5):
 
 @st.cache_data
 def compute_embeddings(X_train, X_test):
-    """Compute PCA, t-SNE, and UMAP embeddings for visualization."""
+    """Compute PCA and t-SNE embeddings for visualization."""
     combined = np.vstack([X_train, X_test])
     labels = ["Train"] * len(X_train) + ["Test"] * len(X_test)
 
@@ -99,11 +95,6 @@ def cached_generate_map(train_proxy_file, coords_file, topo):
     """Cache the map generation process."""
     output_html = "map_output.html"
     return generate_map(train_proxy_file, coords_file, output_html=output_html, topo=new_topo)
-
-
-# ======================
-# 🔹 MAIN APP FUNCTION
-# ======================
 
 
 def show_tab(train_climate_file, train_proxy_file, test_proxy_file, coords_file, axis):
