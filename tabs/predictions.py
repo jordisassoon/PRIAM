@@ -278,8 +278,8 @@ def show_tab(
 ):
     st.header("Predictions & Model Visualizations")
 
-    if X_train is None or X_test is None or y_train is None:
-        st.warning("Please upload training and test datasets in the 'Data Upload' section.")
+    if X_train is None:
+        st.warning("Please upload training and test datasets in the 'Data Loading' section.")
         return
 
     predictions_dict = {}

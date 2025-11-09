@@ -21,99 +21,56 @@ color_map = {
 
 
 def show_tab(
-    train_climate_file,
-    train_proxy_file,
-    test_proxy_file,
-    taxa_mask_file,
-    model_choice,
-    target,
-    n_neighbors,
-    brt_trees,
-    rf_trees,
-    cv_folds,
-    random_seed,
+    X_train,
+    y_train,
+    loader,
+    train_metadata,
 ):
 
     st.header("Model Validation")
-    st.info(
-        "Evaluate model performance using grouped cross-validation and diagnostic metrics (RMSE, MAE, R², r, KGE, Bias)."
-    )
 
-    # --- Check inputs ---
-    if not (train_climate_file and train_proxy_file):
-        st.warning("Please upload both climate and proxy training datasets.")
+    if X_train is None:
+        st.warning("Please upload training datasets in the 'Data Loading' section.")
         return
-
-    try:
-        train_climate_file.seek(0)
-    except:
-        st.warning("Please upload the training climate dataset.")
-        return
-    try:
-        train_proxy_file.seek(0)
-    except:
-        st.warning("Please upload the training proxy dataset.")
-        return
-    try:
-        test_proxy_file.seek(0)
-    except:
-        st.warning("Please upload the test proxy dataset.")
-        return
-
-    # --- Load data ---
-    loader = ProxyDataLoader(
-        climate_file=train_climate_file,
-        proxy_file=train_proxy_file,
-        test_file=test_proxy_file,
-        mask_file=taxa_mask_file,
-    )
-
-    X_train, y_train, obs_names = loader.load_training_data(target)
 
     # --- Available models ---
     available_models = {
-        "MAT": (MAT, {"n_neighbors": n_neighbors}),
+        "MAT": (MAT, {"n_neighbors": st.session_state.get("n_neighbors", None)}),
         "BRT": (
             BRT,
             {
-                "n_estimators": brt_trees,
-                "learning_rate": 0.05,
-                "max_depth": 6,
-                "random_state": random_seed,
+                "n_estimators": st.session_state.get("brt_trees", None),
+                "learning_rate": st.session_state.get("brt_learning_rate", None),
+                "max_depth": st.session_state.get("brt_max_depth", None),
+                "random_state": st.session_state.get("random_seed", None),
             },
         ),
         "RF": (
             RF,
             {
-                "n_estimators": rf_trees,
-                "max_depth": 6,
-                "random_state": random_seed,
+                "n_estimators": st.session_state.get("rf_trees", None),
+                "max_depth": st.session_state.get("rf_max_depth", None),
+                "random_state": st.session_state.get("random_seed", None),
             },
         ),
     }
-
-    if model_choice == "All":
-        models_to_run = available_models
-    else:
-        models_to_run = {model_choice: available_models[model_choice]}
 
     metrics_table = []
     full_table = []
     error_metrics_list = []
 
-    st.subheader(f"Running Cross-validation...")
     # --- Run CV for each model ---
-    for name, (model_class, params) in models_to_run.items():
+    for name, (model_class, params) in available_models.items():
 
-        with st.spinner(f"Running {cv_folds}-fold grouped CV on {name}..."):
+        with st.spinner(f"Running {st.session_state['cv_folds']}-fold grouped CV on {name}..."):
             scores = run_grouped_cv(
                 model_class,
                 params,
                 X_train,
                 y_train,
-                obs_names,
-                n_splits=cv_folds,
-                seed=random_seed,
+                train_metadata["OBSNAME"],
+                n_splits=st.session_state["cv_folds"],
+                seed=st.session_state["random_seed"],
                 loader=loader,
             )
 
@@ -238,7 +195,7 @@ def show_tab(
             },
         }
 
-        for name, (model_class, base_params) in models_to_run.items():
+        for name, (model_class, base_params) in available_models.items():
             if name not in param_ranges:
                 continue  # skip models without scree logic
 
@@ -254,15 +211,15 @@ def show_tab(
                 params = base_params.copy()
                 params[param_name] = val
 
-                with st.spinner(f"Running {cv_folds}-fold CV with {param_name}={val}..."):
+                with st.spinner(f"Running {st.session_state['cv_folds']}-fold CV with {param_name}={val}..."):
                     scores = run_grouped_cv(
                         model_class,
                         params,
                         X_train,
                         y_train,
-                        obs_names,
-                        n_splits=cv_folds,
-                        seed=random_seed,
+                        train_metadata["OBSNAME"],
+                        n_splits=st.session_state["cv_folds"],
+                        seed=st.session_state["random_seed"],
                         loader=loader,
                     )
 

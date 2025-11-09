@@ -161,6 +161,7 @@ else:
     y_train = None
     train_metadata = None
     test_metadata = None
+    loader = None
 
 target_options = get_non_obs_columns(train_climate_file)
 if train_climate_file is not None and target_options:
@@ -195,17 +196,10 @@ elif tab_selection == "Data Exploration":
 
 elif tab_selection == "Validation":
     validation.show_tab(
-        train_climate_file,
-        train_proxy_file,
-        test_proxy_file,
-        taxa_mask_file,
-        model_choice,
-        target,
-        n_neighbors,
-        brt_trees,
-        rf_trees,
-        cv_folds,
-        random_seed,
+        X_train=X_train_aligned,
+        y_train=y_train,
+        loader=loader,
+        train_metadata=train_metadata,
     )
 
 with state_expander:
