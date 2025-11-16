@@ -27,7 +27,7 @@ class MAT(KNeighborsRegressor):
         Training targets stored after fitting.
     """
 
-    def __init__(self, n_neighbors=3, **kwargs):
+    def __init__(self, n_neighbors=3, metric='squared_chord', **kwargs):
         """
         Initialize the MAT model.
 
@@ -35,20 +35,28 @@ class MAT(KNeighborsRegressor):
         ----------
         n_neighbors : int, default=3
             Number of nearest neighbors to consider in predictions.
+        distance_metric : str, default='squared_chord'
+            Distance metric to use. Options are 'squared_chord' or 'chord'.
         **kwargs : dict
             Additional keyword arguments to pass to sklearn's KNeighborsRegressor.
             Examples include `weights='distance'` or `algorithm='ball_tree'`.
         """
         # Initialize the KNeighborsRegressor with a custom metric and parallel processing.
         # n_jobs=-1 ensures that all CPU cores are used for neighbor searches.
-        super().__init__(n_neighbors=n_neighbors, metric=self._mat_distance, **kwargs)
+        if metric == 'squared_chord':
+            metric_func = self._squared_chord_distance
+        elif metric == 'chord':
+            metric_func = self._chord_distance
+        else:
+            raise ValueError("Invalid distance_metric. Choose 'squared_chord' or 'chord'.")
+        super().__init__(n_neighbors=n_neighbors, metric=metric_func, **kwargs)
 
         # Store training data internally for neighbor metadata queries.
         self._fitted_X = None
         self._fitted_y = None
 
     @staticmethod
-    def _mat_distance(x1, x2):
+    def _squared_chord_distance(x1, x2):
         """
         Compute the squared chord distance between two samples.
 
@@ -73,6 +81,28 @@ class MAT(KNeighborsRegressor):
         x1 = np.asarray(x1)
         x2 = np.asarray(x2)
         return np.sum((np.sqrt(x1) - np.sqrt(x2)) ** 2)
+    
+    @staticmethod
+    def _chord_distance(x1, x2):
+        """
+        Compute the chord distance between two samples.
+        The chord distance is the square root of the squared chord distance.
+
+        Formula:
+            d_chord(x1, x2) = sqrt( sum_i (sqrt(x1_i) - sqrt(x2_i))^2 )
+
+        Parameters
+        ----------
+        x1, x2 : array-like
+            Feature vectors of two samples.
+        Returns
+        -------
+        float
+            Chord distance between x1 and x2.
+        """
+        x1 = np.asarray(x1)
+        x2 = np.asarray(x2)
+        return np.sqrt(np.sum((np.sqrt(x1) - np.sqrt(x2)) ** 2))
 
     def fit(self, X, y):
         """

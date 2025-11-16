@@ -244,8 +244,8 @@ def compute_mat_tsne(X_train, X_test):
 
 
 @st.cache_data
-def cached_fit_mat(X_train, y_train, n_neighbors):
-    mat_model = MAT(n_neighbors=n_neighbors)
+def cached_fit_mat(X_train, y_train, n_neighbors, distance_metric):
+    mat_model = MAT(n_neighbors=n_neighbors, metric=distance_metric)
     mat_model.fit(X_train, y_train)
     return mat_model
 
@@ -285,7 +285,7 @@ def show_tab(
     predictions_dict = {}
 
     if st.session_state.get("use_mat"):
-        mat_model = cached_fit_mat(X_train, y_train, st.session_state.get("n_neighbors", None))
+        mat_model = cached_fit_mat(X_train, y_train, st.session_state.get("n_neighbors", None), st.session_state.get("distance_metric", None))
         predictions_dict["MAT"] = mat_model.predict(X_test)
     if st.session_state.get("use_rf"):
         rf_model = cached_fit_rf(

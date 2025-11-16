@@ -35,7 +35,7 @@ def show_tab(
 
     # --- Available models ---
     available_models = {
-        "MAT": (MAT, {"n_neighbors": st.session_state.get("n_neighbors", None)}),
+        "MAT": (MAT, {"n_neighbors": st.session_state.get("n_neighbors", None), "metric": st.session_state.get("distance_metric", None)}),
         "BRT": (
             BRT,
             {

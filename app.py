@@ -51,6 +51,12 @@ with model_expander:
 
     if st.session_state["use_mat"]:
         n_neighbors = st.number_input("MAT Neighbors", 1, 20, value=st.session_state["n_neighbors"], key="n_neighbors")
+        distance_metric = st.selectbox(
+            "MAT Distance Metric",
+            ["squared_chord", "chord"],
+            index=0 if st.session_state["distance_metric"] == "squared_chord" else 1,
+            key="distance_metric",
+        )
     if st.session_state["use_brt"]:
         brt_trees = st.number_input("BRT Trees", 1, 1000, value=st.session_state["brt_trees"], key="brt_trees")
         brt_learning_rate = st.number_input("BRT Learning Rate", 0.01, 1.0, value=st.session_state["brt_learning_rate"], key="brt_learning_rate")

@@ -8,6 +8,7 @@ def get_default_state_config():
         "target_cols": ["TANN", "PANN", "MTWA", "MTCO"],
         "taxa_cols": {},
         "n_neighbors": 5,
+        "distance_metric": "squared_chord",
         "brt_trees": 200,
         "brt_learning_rate": 0.05,
         "brt_max_depth": 6,
