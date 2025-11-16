@@ -17,10 +17,10 @@ def is_light_color(hex_color):
     return luminance > 128  # threshold (0–255 scale)
 
 
-def set_page_config(app_icon_file_path="assets/PRIAM_app_icon.svg"):
+def set_page_config(app_icon_file_path="assets/PRIMA_app_icon.svg"):
     """Set Streamlit page configuration and sidebar logo based on theme."""
     st.set_page_config(
-        page_title="PRIAM Online",
+        page_title="PRIMA Online",
         page_icon=app_icon_file_path,
         layout="wide",
         initial_sidebar_state="expanded",
@@ -42,8 +42,8 @@ def remove_top_padding():
 
 
 def set_sidebar_logo(
-    light_logo_path="assets/PRIAM_full_logo_v3.svg",
-    dark_logo_path="assets/PRIAM_full_logo_v3_white.svg",
+    light_logo_path="assets/PRIMA_full_logo_v3.svg",
+    dark_logo_path="assets/PRIMA_full_logo_v3_white.svg",
 ):
     """Set sidebar logo based on theme background color."""
     theme = st_theme()

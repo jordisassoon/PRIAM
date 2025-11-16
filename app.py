@@ -206,7 +206,7 @@ with state_expander:
     st.download_button(
         label="Save Session",
         data=yaml.dump(st.session_state.to_dict()),
-        file_name="priam_session.yaml",
+        file_name="prima_session.yaml",
         mime="text/yaml",
         width="stretch",
     )
